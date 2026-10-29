@@ -1,0 +1,11 @@
+{% extends "parent_template.html" %}
+{% block content %}
+	<h1>Home Page 2</h1>
+	<!--<p>This is using a template!</p>-->
+	<!-- template loop - posts comes from the context - access keys using dot notation -->
+	{% for post in posts %}
+		<h2>{{ post.title }}</h2>
+		<p>{{ post.content }}</p>
+		<p>by {{ post.author }} on {{ post.date_posted }}</p>
+	{% endfor %}
+{% endblock content %}

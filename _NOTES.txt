@@ -24,8 +24,13 @@ Launch a server with our application - fastapi is part of standard tools
 http://127.0.0.1:8000			- view app
 http://127.0.0.1:8000/docs		- documentation page
 http://127.0.0.1:8000/redoc		- another type of doc page
-Can use localhost as well
+Can use localhost as well - renders a little differently though - fonts smaller, favicon error
 
 Run production:
 > uv run fastapi run main.py
+
+Jinja2 templating system - installed with fastapi[standard] above, but can also be installed separately
+> uv add jinja
+
+Bootstrap for styling
 
