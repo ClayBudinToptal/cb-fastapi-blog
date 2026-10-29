@@ -1,0 +1,31 @@
+
+Tutorials:
+https://www.youtube.com/watch?v=7AMjmCTumuo&list=PL-osiE80TeTsak-c-QsVeg0YYG_0TeyXI
+
+> uv init fastapi-blog-tutorial
+Note: uv init now creates a package/module structure by default with src/<pkg>/__init__.py
+To create the original application structure with main.py, use:
+> uv init --no-package fastapi-blog-tutorial
+
+> cd init fastapi-blog-tutorial
+
+#> pip install "fastapi[standard]"
+> uv add "fastapi[standard]"			- install fastapi with standard additions
+
+> code .								- open in VSCode
+
+Click in Python version area in lower right to make sure virtual environment is selected
+
+Open Terminal - get error on attempting to source venv activate - slashes go wrong direction
+  I don't think it matters since uv manages the venv automatically
+Launch a server with our application - fastapi is part of standard tools
+  dev mode includes auto restart and more debugging info
+> uv run fastapi dev main.py
+http://127.0.0.1:8000			- view app
+http://127.0.0.1:8000/docs		- documentation page
+http://127.0.0.1:8000/redoc		- another type of doc page
+Can use localhost as well
+
+Run production:
+> uv run fastapi run main.py
+
