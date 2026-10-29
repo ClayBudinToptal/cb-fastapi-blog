@@ -33,4 +33,8 @@ Jinja2 templating system - installed with fastapi[standard] above, but can also 
 > uv add jinja
 
 Bootstrap for styling
+{{ substitue in value }}
+{% commands - extends, block, for, if, end* %}
+url_for() robust URL
+
 
