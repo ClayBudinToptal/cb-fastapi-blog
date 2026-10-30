@@ -37,4 +37,15 @@ Bootstrap for styling
 {% commands - extends, block, for, if, end* %}
 url_for() robust URL
 
+sqlalchemy - industry standand module for working with SQL databases in Python
+#> pip install sqlalchemy
+> uv add sqlalchemy
+
+sqlite is built into Python but is not very robust (good for learning)
+will switch later to postgres which is more powerful
+
+
+
+
+
 

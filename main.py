@@ -11,22 +11,23 @@
 # Python dummy data to work with and test our app
 #  looks like JSON but JSON would complain about these comments and commas at end of objects
 #  the variable posts is defined with its type as a list of dictionaries, which is what we want to return from our API endpoint
-posts: list[dict] = [
-	{
-		"id": 1,
-		"author": "Clay Budin",
-		"title": "FastAPI is Awesome!",
-		"content": "This is an example post for our app.",
-		"date_posted": "October 28, 2026",
-	},
-	{
-		"id": 2,
-		"author": "Shecky Greene",
-		"title": "Another Post",
-		"content": "Another example post by a different user.",
-		"date_posted": "October 31, 2026",
-	},
-]
+# not using this any more -> database
+#posts: list[dict] = [
+#	{
+#		"id": 1,
+#		"author": "Clay Budin",
+#		"title": "FastAPI is Awesome!",
+#		"content": "This is an example post for our app.",
+#		"date_posted": "October 28, 2026",
+#	},
+#	{
+#		"id": 2,
+#		"author": "Shecky Greene",
+#		"title": "Another Post",
+#		"content": "Another example post by a different user.",
+#		"date_posted": "October 31, 2026",
+#	},
+#]
 
 
 # app imports
@@ -35,7 +36,17 @@ from fastapi import FastAPI, Request 			# Request is needed to pass to the templ
 from fastapi.templating import Jinja2Templates	# templating system for HTML responses
 from fastapi.staticfiles import StaticFiles		# to serve static files like CSS, JS, images, etc. - mounted below
 
-from schemas import PostCreate, PostResponse	# import pydantic models for data validation and serialization
+from schemas import PostCreate, PostResponse, UserCreate, UserResponse	# import pydantic models for data validation and serialization
+
+# database support
+from typing import Annotated
+from fastapi import Depends						# dependency injection
+from sqlalchemy import select					# queries
+from sqlalchemy.orm import Session
+
+import database_models
+from database import DBBase, engine, get_db
+
 
 # error handling imports
 from fastapi import HTTPException, status		# HTTPException is needed to return 404 error, status gives us access to standard HTTP status codes
@@ -45,14 +56,20 @@ from fastapi.responses import JSONResponse		# JSONResponse is needed to return a
 from starlette.exceptions import HTTPException as StarletteHTTPException	# needed to handle 404 errors and return a custom response
 
 
+
+
 # create app object
 app = FastAPI()
 
 # create templates object to use Jinja2Templates for HTML responses
 templates = Jinja2Templates(directory="templates")	# tell Jinja2 where to find our HTML templates
 
-# mount the static files directory
+# mount the static and media files directories
 app.mount("/static", StaticFiles(directory="static"), name="static")	# tell FastAPI where to find our static files
+app.mount("/media", StaticFiles(directory="media"), name="media")
+
+# create database tables - if doesn't already exist
+DBBase.metadata.create_all(bind=engine)
 
 
 # routes are created with decorators
@@ -69,24 +86,75 @@ app.mount("/static", StaticFiles(directory="static"), name="static")	# tell Fast
 #	return f"<h1>{posts[0]['title']}</h1>"
 
 # now using templates
-@app.get("/", include_in_schema=False, name="home")			# stack decorators to have multiple routes for the same function
-@app.get("/posts", include_in_schema=False, name="posts")	# hide from documentation since this is human, not an API endpoint
-def home (request: Request):	# need to pass the request object to the template so it can generate URLs for static files
-	#return templates.TemplateResponse(request, "home_template.html")	  # return the rendered template (simple - no data passed to template yet)
-	#return templates.TemplateResponse(request, "home_template.html", {"posts": posts, "title": "Home"})	# return the rendered template with context dict data
-	return templates.TemplateResponse(request, "home_template3.html", {"posts": posts, "title": "Home"})	# now using template inheritance
+# OLD - uses dummy data
+#@app.get("/", include_in_schema=False, name="home")			# stack decorators to have multiple routes for the same function
+#@app.get("/posts", include_in_schema=False, name="posts")	# hide from documentation since this is human, not an API endpoint
+#def home (request: Request):	# need to pass the request object to the template so it can generate URLs for static files
+#	#return templates.TemplateResponse(request, "home_template.html")	  # return the rendered template (simple - no data passed to template yet)
+#	#return templates.TemplateResponse(request, "home_template.html", {"posts": posts, "title": "Home"})	# return the rendered template with context dict data
+#	return templates.TemplateResponse(request, "home_template3.html", {"posts": posts, "title": "Home"})	# now using template inheritance
+
+# home - get all posts
+@app.get("/", include_in_schema=False, name="home")
+@app.get("/posts", include_in_schema=False, name="posts")
+def home(request: Request, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(database_models.Post))	# get all posts without filter
+    posts = result.scalars().all()
+    return templates.TemplateResponse(
+        request,
+        "home_template4.html",
+        {"posts": posts, "title": "Home"},
+    )
 
 # display one post based on parameter in the URL path
-@app.get("/posts/{post_id}", include_in_schema=False, name="one_post")	# hide from documentation since this is human, not an API endpoint
-def one_post (request: Request, post_id: int):	# need to pass the request object to the template so it can generate URLs for static files, and post_id is a path parameter
-	for post in posts:
-		if post["id"] == post_id:	# could also use post.get("id") == post_id to avoid KeyError if "id" is not in the dict
-			title = post["title"][:50] if "title" in post else "Post"	# get the title from the post dict, or use a default value if not found
-			return templates.TemplateResponse(request, "post_template.html", {"post": post, "title": title})	# now using template inheritance
-		
-	# raise an HTTPException with 404 status code and a detail message
-	# this will return JSON to the user in the browser which is not good
-	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")
+# OLD - uses dummy data
+#@app.get("/posts/{post_id}", include_in_schema=False, name="one_post")	# hide from documentation since this is human, not an API endpoint
+#def one_post (request: Request, post_id: int):	# need to pass the request object to the template so it can generate URLs for static files, and post_id is a path parameter
+#	for post in posts:
+#		if post["id"] == post_id:	# could also use post.get("id") == post_id to avoid KeyError if "id" is not in the dict
+#			title = post["title"][:50] if "title" in post else "Post"	# get the title from the post dict, or use a default value if not found
+#			return templates.TemplateResponse(request, "post_template.html", {"post": post, "title": title})	# now using template inheritance
+#		
+#	# raise an HTTPException with 404 status code and a detail message
+#	# this will return JSON to the user in the browser which is not good
+#	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")
+
+# get a post by id from the database
+@app.get("/posts/{post_id}", include_in_schema=False)
+def post_page (request: Request, post_id: int, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(database_models.Post).where(database_models.Post.id == post_id))
+    post = result.scalars().first()
+    if post:
+        title = post.title[:50]
+        return templates.TemplateResponse(
+            request,
+            "post_template.html",
+            {"post": post, "title": title},
+        )
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+# get all posts from a user by id from database
+@app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts_page")
+def user_posts_page (
+    request: Request,
+    user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+):
+    result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    result = db.execute(select(database_models.Post).where(database_models.Post.user_id == user_id))
+    posts = result.scalars().all()
+    return templates.TemplateResponse(
+        request,
+        "user_posts_template.html",
+        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
+    )
+
 
 
 
@@ -97,40 +165,147 @@ def one_post (request: Request, post_id: int):	# need to pass the request object
 #	return posts 	# returning a dictionary or list of dicts will automatically be converted to JSON
 
 # return all posts as JSON using pydantic models for validation and serialization
-@app.get("/api/posts", response_model=list[PostResponse], name="get_posts")
-def get_posts ():
-	return posts 	# automatically validated to conform to schema
+# OLD - uses dummy data
+#@app.get("/api/posts", response_model=list[PostResponse], name="get_posts")
+#def get_posts ():
+#	return posts 	# automatically validated to conform to schema
+
+@app.get("/api/posts", response_model=list[PostResponse])
+def get_posts(db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(database_models.Post))
+    posts = result.scalars().all()
+    return posts
+
 
 
 # return one post as JSON based on parameter in the URL path
+# OLD - uses dummy data
 #@app.get("/api/posts/{post_id}")
-@app.get("/api/posts/{post_id}", response_model=PostResponse, name="get_post")	# use pydantic model for validation and serialization
-def get_post (post_id: int):	# int type hint will automatically validate the path parameter and return a 422 error if it is not an int
-	#return posts[post_id - 1] 	# returning a dictionary or list of dicts will automatically be converted to JSON
-	for post in posts:
-		if post["id"] == post_id:	# could also use post.get("id") == post_id to avoid KeyError if "id" is not in the dict
-			return post
+#@app.get("/api/posts/{post_id}", response_model=PostResponse, name="get_post")	# use pydantic model for validation and serialization
+#def get_post (post_id: int):	# int type hint will automatically validate the path parameter and return a 422 error if it is not an int
+#	#return posts[post_id - 1] 	# returning a dictionary or list of dicts will automatically be converted to JSON
+#	for post in posts:
+#		if post["id"] == post_id:	# could also use post.get("id") == post_id to avoid KeyError if "id" is not in the dict
+#			return post
+#
+#	# post id not found
+#	#return {"error": "Post not found"}	# this is not good - returns 200 OK, should return 404 Not Found instead
+#	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")	# raise an HTTPException with 404 status code and a detail message
 
-	# post id not found
-	#return {"error": "Post not found"}	# this is not good - returns 200 OK, should return 404 Not Found instead
-	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")	# raise an HTTPException with 404 status code and a detail message
+@app.get("/api/posts/{post_id}", response_model=PostResponse)
+def get_post(post_id: int, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(database_models.Post).where(database_models.Post.id == post_id))
+    post = result.scalars().first()
+    if post:
+        return post
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
 
 # Create a new post
 # app.post is used to create a new resource, in this case a new post - validates input data against schema
-@app.post("/api/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED, name="create_post")
-def create_post (post: PostCreate):
-    new_id = max(p["id"] for p in posts) + 1 if posts else 1	# dummy id - database will generate this automatically
-    new_post = {
-        "id": new_id,
-        "author": post.author,
-        "title": post.title,
-        "content": post.content,
-        "date_posted": "April 23, 2025",
-    }
-    posts.append(new_post)
+# OLD - uses dummy data
+#@app.post("/api/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED, name="create_post")
+#def create_post (post: PostCreate):
+#    new_id = max(p["id"] for p in posts) + 1 if posts else 1	# dummy id - database will generate this automatically
+#    new_post = {
+#        "id": new_id,
+#        "author": post.author,
+#        "title": post.title,
+#        "content": post.content,
+#        "date_posted": "April 23, 2025",
+#    }
+#    posts.append(new_post)
+#    return new_post
+
+@app.post(
+    "/api/posts",
+    response_model=PostResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_post(post: PostCreate, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(database_models.User).where(database_models.User.id == post.user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    new_post = database_models.Post(
+        title=post.title,
+        content=post.content,
+        user_id=post.user_id,
+    )
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
     return new_post
 
+
+# get all the posts by a user from the database
+@app.get("/api/users/{user_id}/posts", response_model=list[PostResponse])
+def get_user_posts (user_id: int, db: Annotated[Session, Depends(get_db)]):
+	# check user exists to differentiate between empty list bc no user or no posts
+    result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    result = db.execute(select(database_models.Post).where(database_models.Post.user_id == user_id))
+    posts = result.scalars().all()
+    return posts
+
+
+
+# Create a new user in the database
+@app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED, name="create_user")
+# Depends() specify dependency injection - arg is generator which returns db Session's
+def create_user (user: UserCreate, db:Annotated[Session, Depends(get_db)]):
+	# check for existing user
+	result = db.execute(select(database_models.User).where(database_models.User.username == user.username))
+	existing_user = result.scalars().first()
+	# database won't allow us to enter another user with the same name as existing (unique=True) but this is cleaner
+	if existing_user:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Username already exists",
+		)
+
+	# check for existing email
+	result = db.execute(select(database_models.User).where(database_models.User.email == user.email))
+	existing_email = result.scalars().first()
+	if existing_email:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Email already exists",
+		)
+
+	# add to database
+	new_user = database_models.User(
+		username=user.username,
+		email=user.email,
+	)
+	db.add(new_user)			# stage add
+	db.commit()					# execute and save database
+	db.refresh(new_user)		# reload object from database
+
+	return new_user				# pydantic will convert this to UserResponse
+
+
+# get a user by id from the database
+@app.get("/api/users/{user_id}", response_model=UserResponse, name="get_user")	# use pydantic model for validation and serialization
+def get_user (user_id: int, db:Annotated[Session, Depends(get_db)]):
+	# get user
+	result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
+	user = result.scalars().first()
+	if user:
+		return user
+	else:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="User not found",
+		)
 
 
 
