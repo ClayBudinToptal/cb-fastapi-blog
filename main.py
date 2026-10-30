@@ -138,6 +138,7 @@ def create_post (post: PostCreate):
 # exception handlers for custom error responses
 # handle 404 errors for HTML responses
 # using StarletteHTTPException Handler automatically handles cases where the route is not found like http://127.0.0.1:8000/xxxxx
+# fastapi.HTTPException is a subclass so it will also get handled here
 @app.exception_handler(StarletteHTTPException)
 def general_http_exception_handler (request: Request, exception: StarletteHTTPException):
 	# error message
