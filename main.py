@@ -29,11 +29,13 @@ posts: list[dict] = [
 ]
 
 
-# imports
+# app imports
 from fastapi import FastAPI, Request 			# Request is needed to pass to the template for generating URLs for static files
 #from fastapi.responses import HTMLResponse   	# don't need this any more since we are using Jinja2Templates
 from fastapi.templating import Jinja2Templates	# templating system for HTML responses
 from fastapi.staticfiles import StaticFiles		# to serve static files like CSS, JS, images, etc. - mounted below
+
+from schemas import PostCreate, PostResponse	# import pydantic models for data validation and serialization
 
 # error handling imports
 from fastapi import HTTPException, status		# HTTPException is needed to return 404 error, status gives us access to standard HTTP status codes
@@ -90,12 +92,19 @@ def one_post (request: Request, post_id: int):	# need to pass the request object
 
 # /api/* routes will return JSON
 # return all posts as JSON
-@app.get("/api/posts")
+#@app.get("/api/posts")
+#def get_posts ():
+#	return posts 	# returning a dictionary or list of dicts will automatically be converted to JSON
+
+# return all posts as JSON using pydantic models for validation and serialization
+@app.get("/api/posts", response_model=list[PostResponse], name="get_posts")
 def get_posts ():
-	return posts 	# returning a dictionary or list of dicts will automatically be converted to JSON
+	return posts 	# automatically validated to conform to schema
+
 
 # return one post as JSON based on parameter in the URL path
-@app.get("/api/posts/{post_id}")
+#@app.get("/api/posts/{post_id}")
+@app.get("/api/posts/{post_id}", response_model=PostResponse, name="get_post")	# use pydantic model for validation and serialization
 def get_post (post_id: int):	# int type hint will automatically validate the path parameter and return a 422 error if it is not an int
 	#return posts[post_id - 1] 	# returning a dictionary or list of dicts will automatically be converted to JSON
 	for post in posts:
@@ -105,6 +114,22 @@ def get_post (post_id: int):	# int type hint will automatically validate the pat
 	# post id not found
 	#return {"error": "Post not found"}	# this is not good - returns 200 OK, should return 404 Not Found instead
 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")	# raise an HTTPException with 404 status code and a detail message
+
+
+# Create a new post
+# app.post is used to create a new resource, in this case a new post - validates input data against schema
+@app.post("/api/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED, name="create_post")
+def create_post (post: PostCreate):
+    new_id = max(p["id"] for p in posts) + 1 if posts else 1	# dummy id - database will generate this automatically
+    new_post = {
+        "id": new_id,
+        "author": post.author,
+        "title": post.title,
+        "content": post.content,
+        "date_posted": "April 23, 2025",
+    }
+    posts.append(new_post)
+    return new_post
 
 
 
