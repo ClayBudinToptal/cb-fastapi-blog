@@ -44,8 +44,17 @@ sqlalchemy - industry standand module for working with SQL databases in Python
 sqlite is built into Python but is not very robust (good for learning)
 will switch later to postgres which is more powerful
 
+CRUD - Create, Read, Update, Delete - Basic operations for persistent storage
+	Update - put (replace) and patch (partial)
+	Cascade delete - delete dependencies of deleted object eg delete posts when author is deleted
 
-
+HTTP Status Codes
+200 OK - Successful GET, PUT, or PATCH
+201 Created - Successful POST for users and posts
+204 No Content - Successful DELETE
+400 Bad Request - Duplicate username/email when creating user
+404 Not Found - Resource doesn't exist (user or post)
+422 Unprocessable Entity - Validation error (automatic from Pydantic)*
 
 
 

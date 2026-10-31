@@ -34,7 +34,11 @@ class User (DBBase):
     # one-to-many relationship: one user can have many posts, but each post has only one author
     # note that Post is a forward reference here, since Post is defined later in the file - that's why we need to import annotations from __future__ at the top of the file
     #  standard in Python 3.14+
-    posts: Mapped[list[Post]] = relationship(back_populates="author")
+    #posts: Mapped[list[Post]] = relationship(back_populates="author")
+    
+	# updated to have cascaded deletion
+    # all means delete all posts if user is delted, delete-orphan cleans up posts which don't have users assigned
+    posts: Mapped[list[Post]] = relationship(back_populates="author", cascade="all, delete-orphan")
 
 	# property method to generate the full path to the user's profile image - if no image is set, return a default image path
     @property

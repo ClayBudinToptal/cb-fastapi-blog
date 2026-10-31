@@ -25,6 +25,15 @@ class PostCreate (PostBase):
 	#pass	# no additional fields for creating a post
 	user_id: int	# TEMPORARY - will ulitmately come from user authentication system as current user id
 
+# Update spec - patch mode - only update changed fields, make all fields optional
+# if value specified then it is validated
+# can't change user_id here - not included
+# note inherits from BaseModel not PostBase
+class PostUpdate (BaseModel):
+	# same fields as PostBase but now optional with default value None
+	title: str | None = Field(default=None, min_length=1, max_length=100)
+	content: str | None = Field(default=None, min_length=1)
+
 
 class PostResponse (PostBase):
 	# configure the model to allow ORM objects to be returned as pydantic models
@@ -47,6 +56,8 @@ class PostResponse (PostBase):
 
 
 
+
+
 # in dummy data user was a string but now we have a User model in the database, so we can use that instead of a string
 class UserBase (BaseModel):
 	username: str = Field(min_length=1, max_length=50, description="The username of the user")
@@ -54,6 +65,13 @@ class UserBase (BaseModel):
 
 class UserCreate (UserBase):
 	pass
+
+# for patch updating user
+# allow for updating user image
+class UserUpdate (BaseModel):
+	username: str | None = Field(default=None, min_length=1, max_length=50, description="The username of the user")
+	email: EmailStr | None = Field(default=None, max_length=120, description="The email address of the user")	# validates correct email format
+	image_file: str | None = Field(default=None, min_length=1, max_length=200)
 
 # note that UserReponse will contain the user's email address - possibly a security concern for public data
 class UserResponse (UserBase):
