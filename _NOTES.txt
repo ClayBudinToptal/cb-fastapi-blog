@@ -56,5 +56,20 @@ HTTP Status Codes
 404 Not Found - Resource doesn't exist (user or post)
 422 Unprocessable Entity - Validation error (automatic from Pydantic)*
 
+async - handle multiple tasks simultaneously
+	don't wait for i/o bound tasks - database ops, file ops, network ops
+	best for operating under heavy loads
+
+> uv add aiosqlite
+Async driver for sqlite
+
+Could do:
+#> uv add sqlalchemy[asyncio]
+
+or:
+> uv add greenlet
+
+FastAPI can mix sync and async
+
 
 
