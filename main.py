@@ -385,6 +385,13 @@ async def delete_post (post_id: int, db: Annotated[AsyncSession, Depends(get_db)
 
 
 
+# get all users
+@app.get("/api/users", response_model=list[UserResponse])
+async def get_users (db: Annotated[AsyncSession, Depends(get_db)]):
+	#result = await db.execute(select(database_models.User).options(selectinload(database_models.Post.author)))
+	result = await db.execute(select(database_models.User))
+	posts = result.scalars().all()
+	return posts
 
 
 
