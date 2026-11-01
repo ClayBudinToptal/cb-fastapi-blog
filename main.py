@@ -1,33 +1,6 @@
-
-# default main.py from uv init
-#def main():
-#	print("Hello from fastapi-blog-tutorial!")
 #
-#if __name__ == "__main__":
-#	main()
-
-# App code
-
-# Python dummy data to work with and test our app
-#  looks like JSON but JSON would complain about these comments and commas at end of objects
-#  the variable posts is defined with its type as a list of dictionaries, which is what we want to return from our API endpoint
-# not using this any more -> database
-#posts: list[dict] = [
-#	{
-#		"id": 1,
-#		"author": "Clay Budin",
-#		"title": "FastAPI is Awesome!",
-#		"content": "This is an example post for our app.",
-#		"date_posted": "October 28, 2026",
-#	},
-#	{
-#		"id": 2,
-#		"author": "Shecky Greene",
-#		"title": "Another Post",
-#		"content": "Another example post by a different user.",
-#		"date_posted": "October 31, 2026",
-#	},
-#]
+# new main.py after to reorganization in Tutorial #8
+#
 
 
 # app imports
@@ -95,40 +68,9 @@ app.mount("/media", StaticFiles(directory="media"), name="media")
 
 # regular routes - return HTML
 
-# routes are created with decorators
-#@app.get("/")
-## async def home ():	# could use this if we were doing async stuff, but we are not yet
-#def home ():
-#	return {"message": "Hello from fastapi-blog-tutorial! home()"}		# returning a dictionary will automatically be converted to JSON
-
-# /* routes return HTML instead of JSON
-#@app.get("/", response_class=HTMLResponse, include_in_schema=False)			# stack decorators to have multiple routes for the same function
-#@app.get("/posts", response_class=HTMLResponse, include_in_schema=False)	# hide from documentation since this is human, not an API endpoint
-#def home ():
-#	#return f"<h1>{posts[0]['title']}</h1><p>{posts[0]['content']}</p><p>by {posts[0]['author']} on {posts[0]['date_posted']}</p>"
-#	return f"<h1>{posts[0]['title']}</h1>"
-
-# now using templates
-# OLD - uses dummy data
-#@app.get("/", include_in_schema=False, name="home")			# stack decorators to have multiple routes for the same function
-#@app.get("/posts", include_in_schema=False, name="posts")	# hide from documentation since this is human, not an API endpoint
-#def home (request: Request):	# need to pass the request object to the template so it can generate URLs for static files
-#	#return templates.TemplateResponse(request, "home_template.html")	  # return the rendered template (simple - no data passed to template yet)
-#	#return templates.TemplateResponse(request, "home_template.html", {"posts": posts, "title": "Home"})	# return the rendered template with context dict data
-#	return templates.TemplateResponse(request, "home_template3.html", {"posts": posts, "title": "Home"})	# now using template inheritance
-
 # home - get all posts
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
-#def home (request: Request, db: Annotated[Session, Depends(get_db)]):
-#	result = db.execute(select(database_models.Post))	# get all posts without filter
-#	posts = result.scalars().all()
-#	return templates.TemplateResponse(
-#		request,
-#		"home_template4.html",
-#		{"posts": posts, "title": "Home"},
-#	)
-
 async def home (request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
 	# get all posts without filter
 	# await on this since we are running async
@@ -141,33 +83,8 @@ async def home (request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
 		{"posts": posts, "title": "Home"},
 	)
 
-# display one post based on parameter in the URL path
-# OLD - uses dummy data
-#@app.get("/posts/{post_id}", include_in_schema=False, name="one_post")	# hide from documentation since this is human, not an API endpoint
-#def one_post (request: Request, post_id: int):	# need to pass the request object to the template so it can generate URLs for static files, and post_id is a path parameter
-#	for post in posts:
-#		if post["id"] == post_id:	# could also use post.get("id") == post_id to avoid KeyError if "id" is not in the dict
-#			title = post["title"][:50] if "title" in post else "Post"	# get the title from the post dict, or use a default value if not found
-#			return templates.TemplateResponse(request, "post_template.html", {"post": post, "title": title})	# now using template inheritance
-#		
-#	# raise an HTTPException with 404 status code and a detail message
-#	# this will return JSON to the user in the browser which is not good
-#	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")
-
 # get a post by id from the database
 @app.get("/posts/{post_id}", include_in_schema=False)
-#def post_page (request: Request, post_id: int, db: Annotated[Session, Depends(get_db)]):
-#	result = db.execute(select(database_models.Post).where(database_models.Post.id == post_id))
-#	post = result.scalars().first()
-#	if post:
-#		title = post.title[:50]
-#		return templates.TemplateResponse(
-#			request,
-#			"post_template.html",
-#			{"post": post, "title": title},
-#		)
-#	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
-
 async def post_page (request: Request, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 	result = await db.execute(select(database_models.Post)
 	                        	.options(selectinload(database_models.Post.author))		# eager load of author data
@@ -183,30 +100,8 @@ async def post_page (request: Request, post_id: int, db: Annotated[AsyncSession,
 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
 
-
-
 # get all posts from a user by id from database
 @app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts_page")
-#def user_posts_page (
-#	request: Request,
-#	user_id: int,
-#	db: Annotated[Session, Depends(get_db)],
-#):
-#	result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
-#	user = result.scalars().first()
-#	if not user:
-#		raise HTTPException(
-#			status_code=status.HTTP_404_NOT_FOUND,
-#			detail="User not found",
-#		)
-#	result = db.execute(select(database_models.Post).where(database_models.Post.user_id == user_id))
-#	posts = result.scalars().all()
-#	return templates.TemplateResponse(
-#		request,
-#		"user_posts_template.html",
-#		{"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
-#	)
-
 async def user_posts_page (request: Request, user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 	# doesn't need selectinload bc don't need associated Post data
 	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
@@ -223,81 +118,23 @@ async def user_posts_page (request: Request, user_id: int, db: Annotated[AsyncSe
 
 
 
-
 # /api/* routes will return JSON
 
-# return all posts as JSON
-#@app.get("/api/posts")
-#def get_posts ():
-#	return posts 	# returning a dictionary or list of dicts will automatically be converted to JSON
-
-# return all posts as JSON using pydantic models for validation and serialization
-# OLD - uses dummy data
-#@app.get("/api/posts", response_model=list[PostResponse], name="get_posts")
-#def get_posts ():
-#	return posts 	# automatically validated to conform to schema
-
-# regular def's are handled by a separate thread pool
-# adding async will run on main thread - must await i/o bound calls
 
 @app.get("/api/posts", response_model=list[PostResponse])
-#def get_posts (db: Annotated[Session, Depends(get_db)]):
-#	result = db.execute(select(database_models.Post))
-#	posts = result.scalars().all()
-#	return posts
-
 async def get_posts (db: Annotated[AsyncSession, Depends(get_db)]):
 	result = await db.execute(select(database_models.Post).options(selectinload(database_models.Post.author)))
 	posts = result.scalars().all()
 	return posts
 
 
-
-# return one post as JSON based on parameter in the URL path
-# OLD - uses dummy data
-#@app.get("/api/posts/{post_id}")
-#@app.get("/api/posts/{post_id}", response_model=PostResponse, name="get_post")	# use pydantic model for validation and serialization
-#def get_post (post_id: int):	# int type hint will automatically validate the path parameter and return a 422 error if it is not an int
-#	#return posts[post_id - 1] 	# returning a dictionary or list of dicts will automatically be converted to JSON
-#	for post in posts:
-#		if post["id"] == post_id:	# could also use post.get("id") == post_id to avoid KeyError if "id" is not in the dict
-#			return post
-#
-#	# post id not found
-#	#return {"error": "Post not found"}	# this is not good - returns 200 OK, should return 404 Not Found instead
-#	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {post_id} not found")	# raise an HTTPException with 404 status code and a detail message
-
 @app.get("/api/posts/{post_id}", response_model=PostResponse)
-#def get_post (post_id: int, db: Annotated[Session, Depends(get_db)]):
-#	result = db.execute(select(database_models.Post).where(database_models.Post.id == post_id))
-#	post = result.scalars().first()
-#	if post:
-#		return post
-#	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
-
 async def get_post (post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 	result = await db.execute(select(database_models.Post).where(database_models.Post.id == post_id))
 	post = result.scalars().first()
 	if post:
 		return post
 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
-
-
-# Create a new post
-# app.post is used to create a new resource, in this case a new post - validates input data against schema
-# OLD - uses dummy data
-#@app.post("/api/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED, name="create_post")
-#def create_post (post: PostCreate):
-#	new_id = max(p["id"] for p in posts) + 1 if posts else 1	# dummy id - database will generate this automatically
-#	new_post = {
-#		"id": new_id,
-#		"author": post.author,
-#		"title": post.title,
-#		"content": post.content,
-#		"date_posted": "April 23, 2025",
-#	}
-#	posts.append(new_post)
-#	return new_post
 
 @app.post(
 	"/api/posts",
@@ -347,6 +184,7 @@ async def update_post_full (post_id: int, post_data: PostCreate, db: Annotated[A
 	await db.refresh(post, attribute_names=["author"])
 	return post
 
+
 # update a post - partial update - replace only changed fields (patch)
 @app.patch("/api/posts/{post_id}", response_model=PostResponse)
 async def update_post_partial (post_id: int, post_data: PostUpdate, db: Annotated[AsyncSession, Depends(get_db)]):
@@ -383,8 +221,6 @@ async def delete_post (post_id: int, db: Annotated[AsyncSession, Depends(get_db)
 	await db.delete(post)
 	await db.commit()
 
-
-
 # get all users
 @app.get("/api/users", response_model=list[UserResponse])
 async def get_users (db: Annotated[AsyncSession, Depends(get_db)]):
@@ -397,19 +233,6 @@ async def get_users (db: Annotated[AsyncSession, Depends(get_db)]):
 
 # get all the posts by a user from the database
 @app.get("/api/users/{user_id}/posts", response_model=list[PostResponse])
-#def get_user_posts (user_id: int, db: Annotated[Session, Depends(get_db)]):
-#	# check user exists to differentiate between empty list bc no user or no posts
-#	result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
-#	user = result.scalars().first()
-#	if not user:
-#		raise HTTPException(
-#			status_code=status.HTTP_404_NOT_FOUND,
-#			detail="User not found",
-#		)
-#	result = db.execute(select(database_models.Post).where(database_models.Post.user_id == user_id))
-#	posts = result.scalars().all()
-#	return posts
-
 async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 	# check user exists to differentiate between empty list bc no user or no posts
 	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
@@ -426,38 +249,6 @@ async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_
 
 # Create a new user in the database
 @app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED, name="create_user")
-# Depends() specify dependency injection - arg is generator which returns db Session's
-#def create_user (user: UserCreate, db:Annotated[Session, Depends(get_db)]):
-#	# check for existing user
-#	result = db.execute(select(database_models.User).where(database_models.User.username == user.username))
-#	existing_user = result.scalars().first()
-#	# database won't allow us to enter another user with the same name as existing (unique=True) but this is cleaner
-#	if existing_user:
-#		raise HTTPException(
-#			status_code=status.HTTP_400_BAD_REQUEST,
-#			detail="Username already exists",
-#		)
-#
-#	# check for existing email
-#	result = db.execute(select(database_models.User).where(database_models.User.email == user.email))
-#	existing_email = result.scalars().first()
-#	if existing_email:
-#		raise HTTPException(
-#			status_code=status.HTTP_400_BAD_REQUEST,
-#			detail="Email already exists",
-#		)
-#
-#	# add to database
-#	new_user = database_models.User(
-#		username=user.username,
-#		email=user.email,
-#	)
-#	db.add(new_user)			# stage add
-#	db.commit()					# execute and save database
-#	db.refresh(new_user)		# reload object from database
-#
-#	return new_user				# pydantic will convert this to UserResponse
-
 async def create_user (user: UserCreate, db:Annotated[AsyncSession, Depends(get_db)]):
 	# check for existing user
 	result = await db.execute(select(database_models.User).where(database_models.User.username == user.username))
@@ -481,18 +272,6 @@ async def create_user (user: UserCreate, db:Annotated[AsyncSession, Depends(get_
 
 # get a user by id from the database
 @app.get("/api/users/{user_id}", response_model=UserResponse, name="get_user")	# use pydantic model for validation and serialization
-#def get_user (user_id: int, db:Annotated[Session, Depends(get_db)]):
-#	# get user
-#	result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
-#	user = result.scalars().first()
-#	if user:
-#		return user
-#	else:
-#		raise HTTPException(
-#			status_code=status.HTTP_404_NOT_FOUND,
-#			detail="User not found",
-#		)
-
 async def get_user (user_id: int, db:Annotated[AsyncSession, Depends(get_db)]):
 	# get user
 	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
@@ -542,18 +321,6 @@ async def update_user(
 # delete a user
 # set up in database_models to automatically delete all posts by this user (cascade delete)
 @app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-#def delete_user (user_id: int, db: Annotated[Session, Depends(get_db)]):
-#    result = db.execute(select(database_models.User).where(database_models.User.id == user_id))
-#    user = result.scalars().first()
-#    if not user:
-#        raise HTTPException(
-#            status_code=status.HTTP_404_NOT_FOUND,
-#            detail="User not found",
-#        )
-#
-#    db.delete(user)
-#    db.commit()
-
 async def delete_user (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
     user = result.scalars().first()
@@ -579,12 +346,6 @@ async def general_http_exception_handler (request: Request, exception: Starlette
 
 	# if from api route, return JSON response
 	if request.url.path.startswith("/api"):
-		# this is a simple response for now, should use fastapi response which handles more cases
-		#return JSONResponse(
-		#	status_code=exception.status_code,
-		#	content={"detail": message},
-		#)
-
 		# use FastAPI's handler - async and cleaner
 		return await http_exception_handler(request, exception)
 
@@ -605,10 +366,6 @@ async def general_http_exception_handler (request: Request, exception: Starlette
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler (request: Request, exception: RequestValidationError):
 	if request.url.path.startswith("/api"):
-		#return JSONResponse(
-		#	status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-		#	content={"detail": exception.errors()},
-		#)
 		return await request_validation_exception_handler(request, exception)
 	
 	return templates.TemplateResponse(

@@ -71,5 +71,6 @@ or:
 
 FastAPI can mix sync and async
 
+API Router - FastAPI tool for organizing route points
 
 
