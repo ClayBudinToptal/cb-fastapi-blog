@@ -1,5 +1,5 @@
 #
-# this file makes the project a proper Python module
+# this file makes routers/ a proper Python (sub-)module
 #
-# no code here
+# no code here needed
 #
