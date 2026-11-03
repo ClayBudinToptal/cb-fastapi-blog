@@ -8,8 +8,8 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exception_handlers import (
-    http_exception_handler,
-    request_validation_exception_handler,
+	http_exception_handler,
+	request_validation_exception_handler,
 )
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
@@ -64,7 +64,7 @@ async def home (request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
 	# get all posts without filter
 	# await on this since we are running async
 	# must explicitly specify to load (eager load) associated author (User) data for each Post that we load
-	result = await db.execute(select(database_models.Post).options(selectinload(database_models.Post.author)))
+	result = await db.execute(select(database_models.Post).options(selectinload(database_models.Post.author)).order_by(database_models.Post.id.desc()))
 	posts = result.scalars().all()
 	return templates.TemplateResponse(
 		request,
@@ -76,8 +76,8 @@ async def home (request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
 @app.get("/posts/{post_id}", include_in_schema=False)
 async def post_page (request: Request, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 	result = await db.execute(select(database_models.Post)
-	                        	.options(selectinload(database_models.Post.author))		# eager load of author data
-	                            .where(database_models.Post.id == post_id))
+								.options(selectinload(database_models.Post.author))		# eager load of author data
+								.where(database_models.Post.id == post_id))
 	post = result.scalars().first()
 	if post:
 		title = post.title[:50]
@@ -100,8 +100,10 @@ async def user_posts_page (request: Request, user_id: int, db: Annotated[AsyncSe
 
 	# here we do need selectinload
 	result = await db.execute(select(database_models.Post)
-	                    	  .options(selectinload(database_models.Post.author))		# before where()
-	                    	  .where(database_models.Post.user_id == user_id))
+							  .options(selectinload(database_models.Post.author))		# before where()
+							  .where(database_models.Post.user_id == user_id)
+							  .order_by(database_models.Post.id.desc())					# sort by id descending so newest posts first
+							  )
 	posts = result.scalars().all()
 	return templates.TemplateResponse(request, "user_posts_template.html", {"posts": posts, "user": user, "title": f"{user.username}'s Posts"})
 

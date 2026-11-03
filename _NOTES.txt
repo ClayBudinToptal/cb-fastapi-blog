@@ -11,6 +11,7 @@ To create the original application structure with main.py, use:
 
 #> pip install "fastapi[standard]"
 > uv add "fastapi[standard]"			- install fastapi with standard additions
+> uv sync
 
 > code .								- open in VSCode
 
@@ -72,5 +73,7 @@ or:
 FastAPI can mix sync and async
 
 APIRouter - FastAPI tool for organizing route points
+	Allows grouping of routes into separate files
+
 
 

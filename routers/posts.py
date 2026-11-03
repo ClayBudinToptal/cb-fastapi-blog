@@ -18,7 +18,11 @@ router = APIRouter()
 # get all posts
 @router.get("", response_model=list[PostResponse])
 async def get_posts (db: Annotated[AsyncSession, Depends(get_db)]):
-	result = await db.execute(select(database_models.Post).options(selectinload(database_models.Post.author)))
+	result = await db.execute(
+		select(database_models.Post)
+		.options(selectinload(database_models.Post.author))
+		.order_by(database_models.Post.id.desc())
+	)
 	posts = result.scalars().all()
 	return posts
 

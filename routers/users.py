@@ -63,8 +63,10 @@ async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_
 	if not user:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 	result = await db.execute(select(database_models.Post)
-	                          .options(selectinload(database_models.Post.author))
-	                          .where(database_models.Post.user_id == user_id))
+							  .options(selectinload(database_models.Post.author))
+							  .where(database_models.Post.user_id == user_id)
+							  .order_by(database_models.Post.id.desc())
+							  )
 	posts = result.scalars().all()
 	return posts
 
@@ -118,12 +120,12 @@ async def update_user(
 # set up in database_models to automatically delete all posts by this user (cascade delete)
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
-    user = result.scalars().first()
-    if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
+	user = result.scalars().first()
+	if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    await db.delete(user)	# unlike .add(), .delete() needs await
-    await db.commit()
+	await db.delete(user)	# unlike .add(), .delete() needs await
+	await db.commit()
 
 
 
