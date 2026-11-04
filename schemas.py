@@ -1,3 +1,9 @@
+#
+# pydantic models for data validation and serialization
+#
+# separate from database models to avoid circular imports and to allow for different validation and serialization rules
+#
+
 
 # allow forward references
 from __future__ import annotations
@@ -52,7 +58,7 @@ class PostResponse (PostBase):
 	id: int
 	user_id: int
 	date_posted: datetime		# serialized to standard automatically
-	author: UserResponse		# this will automatically be retrieved from the database and validated
+	author: UserPublic		# this will automatically be retrieved from the database and validated
 
 
 
@@ -64,7 +70,8 @@ class UserBase (BaseModel):
 	email: EmailStr = Field(max_length=120, description="The email address of the user")	# validates correct email format
 
 class UserCreate (UserBase):
-	pass
+	#pass
+	password: str = Field(min_length=8, description="The password of the user")	# will be hashed before storing in database
 
 # for patch updating user
 # allow for updating user image
@@ -74,13 +81,28 @@ class UserUpdate (BaseModel):
 	image_file: str | None = Field(default=None, min_length=1, max_length=200)
 
 # note that UserReponse will contain the user's email address - possibly a security concern for public data
-class UserResponse (UserBase):
+#class UserResponse (UserBase):
+#	model_config = ConfigDict(from_attributes=True)
+#
+#	id: int
+#	image_file: str | None
+#	image_path: str							# property on model - not stored in database
+
+# split UserResponse into two models - one for public data and one for private data
+# does not include email address - for public data
+class UserPublic (BaseModel):
 	model_config = ConfigDict(from_attributes=True)
 
 	id: int
+	username: str
 	image_file: str | None
 	image_path: str							# property on model - not stored in database
 
+class UserPrivate (UserPublic):
+	email: EmailStr
 
-
+# access tokens for authentication - will be used for JWT tokens
+class Token (BaseModel):
+	access_token: str
+	token_type: str
 

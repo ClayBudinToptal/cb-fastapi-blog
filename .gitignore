@@ -12,5 +12,6 @@ wheels/
 blog.db
 media/
 
+.env
 
 

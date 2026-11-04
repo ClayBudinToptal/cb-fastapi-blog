@@ -134,7 +134,8 @@
 	} from "/static/js/utils.js";
 
 	// Get post ID from Jinja2 template
-	const postId = {{ post.id }};
+	//const postId = {{ post.id }};				// VSCode thinks this is a syntax error, but it's valid Jinja2 syntax.
+	const postId = Number("{{ post.id }}");		// workaround for the error in VSCode, but still valid Jinja2 syntax.
 
 	// Edit Post Form Handler
 	const editForm = document.getElementById("editPostForm");

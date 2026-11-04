@@ -75,5 +75,29 @@ FastAPI can mix sync and async
 APIRouter - FastAPI tool for organizing route points
 	Allows grouping of routes into separate files
 
+Authentication:
+#> pip install "pwdlib[argon2]" pyjwt pydantic-settings
+> uv add "pwdlib[argon2]" pyjwt pydantic-settings
+
+Delete database file blog.db and start over, since we are adding a field
+Can update a production db with tools like Alembic, but for testing easier
+  to just delete and start over
+
+Generate secret key
+> python -c "import secrets; print(secrets.token_hex(32))"
+Put this in .env file as SECRET_KEY
+
+Add .env to .gitignore - never check in secrets
+
+JWT - JSON Web token - 3 parts, separated by dots
+	Header - algorithm and type
+	Payload - data + expiration
+	Signature - proves not tampered with, uses Secret Key
+
+
+
+
+
+
 
 
