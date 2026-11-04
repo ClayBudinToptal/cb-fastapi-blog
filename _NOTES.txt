@@ -94,6 +94,8 @@ JWT - JSON Web token - 3 parts, separated by dots
 	Payload - data + expiration
 	Signature - proves not tampered with, uses Secret Key
 
+Authentication: Who are you?
+Authorization: What can you do?
 
 
 

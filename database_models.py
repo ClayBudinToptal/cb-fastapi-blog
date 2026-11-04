@@ -33,7 +33,7 @@ class User (DBBase):
 	# password hash - never the plaintext password
 	# hash with argon2
 	# delete dabase file blog.db and start fresh, could also use alembic to migrate the database
-	password: Mapped[str] = mapped_column(String(200), nullable=False)
+	password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
 
 	# list of posts by this user - relationship to Post model - back_populates is used to define the reverse relationship in the Post model
 	# one-to-many relationship: one user can have many posts, but each post has only one author

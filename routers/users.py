@@ -170,7 +170,7 @@ async def get_user (user_id: int, db:Annotated[AsyncSession, Depends(get_db)]):
 	raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 # patch update a user - don't really need a put
-@router.patch("/{user_id}", response_model=UserPublic)
+@router.patch("/{user_id}", response_model=UserPrivate)
 async def update_user(
 	user_id: int,
 	user_update: UserUpdate,
@@ -182,13 +182,13 @@ async def update_user(
 	if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 	# if username is changing, make sure it is not already in use
-	if user_update.username is not None and user_update.username != user.username:
+	if user_update.username is not None and user_update.username.lower() != user.username.lower():
 		result = await db.execute(select(database_models.User).where(func.lower(database_models.User.username) == user_update.username.lower()))
 		existing_user = result.scalars().first()
 		if existing_user: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
 
 	# check email not already in use
-	if user_update.email is not None and user_update.email != user.email:
+	if user_update.email is not None and user_update.email.lower() != user.email.lower():
 		result = await db.execute(select(database_models.User).where(func.lower(database_models.User.email) == user_update.email.lower()))
 		existing_email = result.scalars().first()
 		if existing_email: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
@@ -197,7 +197,7 @@ async def update_user(
 	if user_update.username is not None:
 		user.username = user_update.username
 	if user_update.email is not None:
-		user.email = user_update.email
+		user.email = user_update.email.lower()
 	if user_update.image_file is not None:
 		user.image_file = user_update.image_file
 
