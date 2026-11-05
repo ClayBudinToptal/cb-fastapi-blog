@@ -82,7 +82,7 @@ class UserCreate (UserBase):
 class UserUpdate (BaseModel):
 	username: str | None = Field(default=None, min_length=1, max_length=50, description="The username of the user")
 	email: EmailStr | None = Field(default=None, max_length=120, description="The email address of the user")	# validates correct email format
-	image_file: str | None = Field(default=None, min_length=1, max_length=200)
+	#image_file: str | None = Field(default=None, min_length=1, max_length=200)	# this is a security risk - user could set arbitrary string - don't allow user to set here
 
 # note that UserReponse will contain the user's email address - possibly a security concern for public data
 #class UserResponse (UserBase):

@@ -25,6 +25,8 @@ class Settings (BaseSettings):
 	algorithm: str = "HS256"	# algorithm for signing JWT tokens
 	access_token_expire_minutes: int = 30	# access token expiration time in minutes
 
+	max_upload_size_bytes: int = 5 * 1024 * 1024	# maximum upload size in bytes (5 MB)
+
 settings = Settings()	# create a global settings object that can be imported and used throughout the application
 
 

@@ -97,6 +97,11 @@ JWT - JSON Web token - 3 parts, separated by dots
 Authentication: Who are you?	401 error - not authenticated
 Authorization: What can you do?		403 error - forbidden - not allowed
 
+Pillow - Python imaging library
+> uv add pillow
+
+For file uploads in fastapi need multipart - installed with fastapi[standard]
+
 
 
 
