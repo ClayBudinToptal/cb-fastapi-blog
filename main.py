@@ -109,20 +109,29 @@ async def user_posts_page (request: Request, user_id: int, db: Annotated[AsyncSe
 
 # login and register pages - return HTML
 @app.get("/login", include_in_schema=False)
-async def login_page(request: Request):
+async def login_page (request: Request):
 	return templates.TemplateResponse(
 		request,
 		"login_template.html",
 		{"title": "Login"},
 	)
 
-
+# create user account page - return HTML
 @app.get("/register", include_in_schema=False)
-async def register_page(request: Request):
+async def register_page (request: Request):
 	return templates.TemplateResponse(
 		request,
 		"register_template.html",
 		{"title": "Register"},
+	)
+
+# manage account page - return HTML
+@app.get("/account", include_in_schema=False)
+async def account_page (request: Request):
+	return templates.TemplateResponse(
+		request,
+		"account_template.html",
+		{"title": "Account"},
 	)
 
 

@@ -21,6 +21,9 @@ from sqlalchemy import func		# allows for case-insensitive search with func.lowe
 from auth import create_access_token, hash_password, verify_password, oauth2_scheme, verify_access_token
 from config import settings
 
+from auth import CurrentUser	# dependency to get current user from token
+
+
 # create Router for User
 router = APIRouter()
 
@@ -98,41 +101,42 @@ async def login_for_access_token(
 #  should not matter with type hints, but just in case
 # better than just accessing the token in JS because this will validate it as well and return the user object from the database
 @router.get("/me", response_model=UserPrivate)
-async def get_current_user(
-	token: Annotated[str, Depends(oauth2_scheme)],
-	db: Annotated[AsyncSession, Depends(get_db)],
-):
-	"""Get the currently authenticated user."""
-	user_id = verify_access_token(token)
-	if user_id is None:
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Invalid or expired token",
-			headers={"WWW-Authenticate": "Bearer"},
-		)
-
-	# Validate user_id is a valid integer (defense against malformed JWT)
-	try:
-		user_id_int = int(user_id)
-	except (TypeError, ValueError):
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Invalid or expired token",
-			headers={"WWW-Authenticate": "Bearer"},
-		)
-
-	result = await db.execute(
-		select(database_models.User).where(database_models.User.id == user_id_int),
-	)
-	user = result.scalars().first()
-	if not user:
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="User not found",
-			headers={"WWW-Authenticate": "Bearer"},
-		)
-	return user
-
+#async def get_current_user(
+#	token: Annotated[str, Depends(oauth2_scheme)],
+#	db: Annotated[AsyncSession, Depends(get_db)],
+#):
+#	"""Get the currently authenticated user."""
+#	user_id = verify_access_token(token)
+#	if user_id is None:
+#		raise HTTPException(
+#			status_code=status.HTTP_401_UNAUTHORIZED,
+#			detail="Invalid or expired token",
+#			headers={"WWW-Authenticate": "Bearer"},
+#		)
+#
+#	# Validate user_id is a valid integer (defense against malformed JWT)
+#	try:
+#		user_id_int = int(user_id)
+#	except (TypeError, ValueError):
+#		raise HTTPException(
+#			status_code=status.HTTP_401_UNAUTHORIZED,
+#			detail="Invalid or expired token",
+#			headers={"WWW-Authenticate": "Bearer"},
+#		)
+#
+#	result = await db.execute(
+#		select(database_models.User).where(database_models.User.id == user_id_int),
+#	)
+#	user = result.scalars().first()
+#	if not user:
+#		raise HTTPException(
+#			status_code=status.HTTP_401_UNAUTHORIZED,
+#			detail="User not found",
+#			headers={"WWW-Authenticate": "Bearer"},
+#		)
+#	return user
+async def get_current_user (current_user: CurrentUser):
+	return current_user	# just return the user object from the dependency - no need to query the database again
 
 
 # get all users
@@ -147,7 +151,7 @@ async def get_users (db: Annotated[AsyncSession, Depends(get_db)]):
 @router.get("/{user_id}/posts", response_model=list[PostResponse])
 async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 	# check user exists to differentiate between empty list bc no user or no posts
-	result = await db.execute(select(database_models.User).where(func.lower(database_models.User.id) == user_id.lower()))
+	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
 	user = result.scalars().first()
 	if not user:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -163,7 +167,7 @@ async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_
 @router.get("/{user_id}", response_model=UserPublic, name="get_user")	# use pydantic model for validation and serialization
 async def get_user (user_id: int, db:Annotated[AsyncSession, Depends(get_db)]):
 	# get user
-	result = await db.execute(select(database_models.User).where(func.lower(database_models.User.id) == user_id.lower()))
+	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
 	user = result.scalars().first()
 	if user:
 		return user
@@ -173,11 +177,17 @@ async def get_user (user_id: int, db:Annotated[AsyncSession, Depends(get_db)]):
 @router.patch("/{user_id}", response_model=UserPrivate)
 async def update_user(
 	user_id: int,
+	current_user: CurrentUser,
 	user_update: UserUpdate,
 	db: Annotated[AsyncSession, Depends(get_db)],
 ):
+	# check if the current user is the same as the user being updated - only allow user to update their own data
+	if current_user.id != user_id:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
+	
 	# find user
-	result = await db.execute(select(database_models.User).where(func.lower(database_models.User.id) == user_id.lower()))
+	# do we still need to get the user here? - current_user is already validated and retrieved from the database, so user_id should be valid
+	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
 	user = result.scalars().first()
 	if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -208,8 +218,12 @@ async def update_user(
 # delete a user
 # set up in database_models to automatically delete all posts by this user (cascade delete)
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-	result = await db.execute(select(database_models.User).where(func.lower(database_models.User.id) == user_id.lower()))
+async def delete_user (user_id: int, current_user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+	# check if the current user is the same as the user being deleted - only allow user to delete their own account
+	if current_user.id != user_id:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this user")
+	
+	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
 	user = result.scalars().first()
 	if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 

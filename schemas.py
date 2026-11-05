@@ -29,7 +29,11 @@ class PostBase (BaseModel):
 
 class PostCreate (PostBase):
 	#pass	# no additional fields for creating a post
-	user_id: int	# TEMPORARY - will ulitmately come from user authentication system as current user id
+	# TEMPORARY - will ulitmately come from user authentication system as current user id
+	#  having this here is a security risk - user could create a post for another user if they know the user id
+	#  should get user_id from the token
+	#user_id: int
+	pass	# remove user_id from PostCreate - will be set in the route handler from the current user id
 
 # Update spec - patch mode - only update changed fields, make all fields optional
 # if value specified then it is validated
