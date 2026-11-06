@@ -108,9 +108,21 @@ Script to add some users and posts to the db - for working with pagination
 fastapi.pagination can also handle pagination automatically
 https://github.com/uriyyo/fastapi-pagination
 
+Password reset - email token
+	Security issue: should be hard to guess and expire quickly (~1 hour or less), single-use, not reveal emails
 
+SMTP lib in Python is synchronous - we need async
+> uv add aiosmtplib
 
-
-
+Email providers
+	Production: SendGrid, AWS
+	Dev: MailTrap - test email service - sandbox - free tier w/ 100 test emails/mo
+		https://mailtrap.io/
+	
+Email template - differ from web templates
+	Use inline CSS
+	Use simple table-based layouts bc email clients often don't support full CSS
+	Don't include JavaScript - email clients will strip it out (security risk)
+	Not JWTs - can't be invalidated before they expire (single-use), use simple random token
 
 

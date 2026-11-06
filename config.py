@@ -29,6 +29,19 @@ class Settings (BaseSettings):
 
 	posts_per_page: int = 10	# pagination
 
+	reset_token_expire_minutes: int = 60
+
+	## Email Configuration Settings
+	mail_server: str = "localhost"
+	mail_port: int = 587			# standard port for SMTP with Start TLS (encryption)
+	mail_username: str = ""
+	mail_password: SecretStr = SecretStr("")
+	mail_from: str = "noreply@example.com"
+	mail_use_tls: bool = True
+
+	frontend_url: str = "http://localhost:8000"
+
+
 settings = Settings()	# create a global settings object that can be imported and used throughout the application
 
 
