@@ -14,7 +14,7 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -24,6 +24,8 @@ from database import DBBase, engine, get_db
 
 # import individual routers from routers module
 from routers import posts, users
+
+from config import settings
 
 
 # create database tables - if don't already exist
@@ -58,19 +60,51 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 # regular routes - return HTML
 
 # home - get all posts
+#@app.get("/", include_in_schema=False, name="home")
+#@app.get("/posts", include_in_schema=False, name="posts")
+#async def home (request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+#	# get all posts without filter
+#	# await on this since we are running async
+#	# must explicitly specify to load (eager load) associated author (User) data for each Post that we load
+#	result = await db.execute(select(database_models.Post).options(selectinload(database_models.Post.author)).order_by(database_models.Post.id.desc()))
+#	posts = result.scalars().all()
+#	return templates.TemplateResponse(
+#		request,
+#		"home_template4.html",
+#		{"posts": posts, "title": "Home"},
+#	)
+
+## home route - paginated
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
-async def home (request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-	# get all posts without filter
-	# await on this since we are running async
-	# must explicitly specify to load (eager load) associated author (User) data for each Post that we load
-	result = await db.execute(select(database_models.Post).options(selectinload(database_models.Post.author)).order_by(database_models.Post.id.desc()))
+async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+	# get number of posts in db
+	count_result = await db.execute(select(func.count()).select_from(database_models.Post))
+	total = count_result.scalar() or 0
+
+	# get first page of posts (skip = 0)
+	result = await db.execute(
+		select(database_models.Post)
+		.options(selectinload(database_models.Post.author))
+		.order_by(database_models.Post.date_posted.desc())
+		.limit(settings.posts_per_page),
+	)
 	posts = result.scalars().all()
+
+	has_more = len(posts) < total
+
 	return templates.TemplateResponse(
 		request,
 		"home_template4.html",
-		{"posts": posts, "title": "Home"},
+		{
+			"posts": posts,
+			"title": "Home",
+			"limit": settings.posts_per_page,
+			"has_more": has_more,
+		},
 	)
+
+
 
 # get a post by id from the database
 @app.get("/posts/{post_id}", include_in_schema=False)
@@ -90,22 +124,68 @@ async def post_page (request: Request, post_id: int, db: Annotated[AsyncSession,
 
 
 # get all posts from a user by id from database
+#@app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts_page")
+#async def user_posts_page (request: Request, user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+#	# doesn't need selectinload bc don't need associated Post data
+#	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
+#	user = result.scalars().first()
+#	if not user:
+#		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+#
+#	# here we do need selectinload
+#	result = await db.execute(select(database_models.Post)
+#							  .options(selectinload(database_models.Post.author))		# before where()
+#							  .where(database_models.Post.user_id == user_id)
+#							  .order_by(database_models.Post.id.desc())					# sort by id descending so newest posts first
+#							  )
+#	posts = result.scalars().all()
+#	return templates.TemplateResponse(request, "user_posts_template.html", {"posts": posts, "user": user, "title": f"{user.username}'s Posts"})
+
+## user_posts_page route - paginated
 @app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts_page")
-async def user_posts_page (request: Request, user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-	# doesn't need selectinload bc don't need associated Post data
+async def user_posts_page(
+	request: Request,
+	user_id: int,
+	db: Annotated[AsyncSession, Depends(get_db)],
+):
 	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
 	user = result.scalars().first()
 	if not user:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="User not found",
+		)
 
-	# here we do need selectinload
-	result = await db.execute(select(database_models.Post)
-							  .options(selectinload(database_models.Post.author))		# before where()
-							  .where(database_models.Post.user_id == user_id)
-							  .order_by(database_models.Post.id.desc())					# sort by id descending so newest posts first
-							  )
+	count_result = await db.execute(
+		select(func.count())
+		.select_from(database_models.Post)
+		.where(database_models.Post.user_id == user_id),
+	)
+	total = count_result.scalar() or 0
+
+	result = await db.execute(
+		select(database_models.Post)
+		.options(selectinload(database_models.Post.author))
+		.where(database_models.Post.user_id == user_id)
+		.order_by(database_models.Post.date_posted.desc())
+		.limit(settings.posts_per_page),
+	)
 	posts = result.scalars().all()
-	return templates.TemplateResponse(request, "user_posts_template.html", {"posts": posts, "user": user, "title": f"{user.username}'s Posts"})
+
+	has_more = len(posts) < total
+
+	return templates.TemplateResponse(
+		request,
+		"user_posts_template.html",
+		{
+			"posts": posts,
+			"user": user,
+			"title": f"{user.username}'s Posts",
+			"limit": settings.posts_per_page,
+			"has_more": has_more,
+		},
+	)
+
 
 # login and register pages - return HTML
 @app.get("/login", include_in_schema=False)

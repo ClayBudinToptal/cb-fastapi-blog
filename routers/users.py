@@ -5,14 +5,14 @@
 # only need imports that pertain to Users
 from typing import Annotated	# allows for type hints with dependencies
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import database_models
 from database import get_db
-from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, UserUpdate, Token
+from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, UserUpdate, Token, PaginatedPostsResponse
 
 # authentication imports - needed for login and token generation
 from datetime import timedelta, datetime
@@ -154,20 +154,64 @@ async def get_users (db: Annotated[AsyncSession, Depends(get_db)]):
 	return posts
 
 # get all the posts by a user from the database
-@router.get("/{user_id}/posts", response_model=list[PostResponse])
-async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-	# check user exists to differentiate between empty list bc no user or no posts
+#@router.get("/{user_id}/posts", response_model=list[PostResponse])
+#async def get_user_posts (user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+#	# check user exists to differentiate between empty list bc no user or no posts
+#	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
+#	user = result.scalars().first()
+#	if not user:
+#		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+#	result = await db.execute(select(database_models.Post)
+#							  .options(selectinload(database_models.Post.author))
+#							  .where(database_models.Post.user_id == user_id)
+#							  .order_by(database_models.Post.id.desc())
+#							  )
+#	posts = result.scalars().all()
+#	return posts
+
+## get_user_posts - paginated
+@router.get("/{user_id}/posts", response_model=PaginatedPostsResponse, name="user_posts")
+async def get_user_posts(
+	user_id: int,
+	db: Annotated[AsyncSession, Depends(get_db)],
+	skip: Annotated[int, Query(ge=0)] = 0,
+	limit: Annotated[int, Query(ge=1, le=100)] = 10,
+):
 	result = await db.execute(select(database_models.User).where(database_models.User.id == user_id))
 	user = result.scalars().first()
 	if not user:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-	result = await db.execute(select(database_models.Post)
-							  .options(selectinload(database_models.Post.author))
-							  .where(database_models.Post.user_id == user_id)
-							  .order_by(database_models.Post.id.desc())
-							  )
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="User not found",
+		)
+
+	count_result = await db.execute(
+		select(func.count())
+		.select_from(database_models.Post)
+		.where(database_models.Post.user_id == user_id),
+	)
+	total = count_result.scalar() or 0
+
+	result = await db.execute(
+		select(database_models.Post)
+		.options(selectinload(database_models.Post.author))
+		.where(database_models.Post.user_id == user_id)
+		.order_by(database_models.Post.date_posted.desc())
+		.offset(skip)
+		.limit(limit),
+	)
 	posts = result.scalars().all()
-	return posts
+
+	has_more = skip + len(posts) < total
+
+	return PaginatedPostsResponse(
+		posts=[PostResponse.model_validate(post) for post in posts],
+		total=total,
+		skip=skip,
+		limit=limit,
+		has_more=has_more,
+	)
+
 
 # get a user by id from the database
 @router.get("/{user_id}", response_model=UserPublic, name="get_user")	# use pydantic model for validation and serialization

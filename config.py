@@ -27,6 +27,8 @@ class Settings (BaseSettings):
 
 	max_upload_size_bytes: int = 5 * 1024 * 1024	# maximum upload size in bytes (5 MB)
 
+	posts_per_page: int = 10	# pagination
+
 settings = Settings()	# create a global settings object that can be imported and used throughout the application
 
 

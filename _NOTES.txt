@@ -102,6 +102,12 @@ Pillow - Python imaging library
 
 For file uploads in fastapi need multipart - installed with fastapi[standard]
 
+Script to add some users and posts to the db - for working with pagination
+> uv run python populate_db.py
+
+fastapi.pagination can also handle pagination automatically
+https://github.com/uriyyo/fastapi-pagination
+
 
 
 

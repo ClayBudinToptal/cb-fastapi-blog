@@ -65,6 +65,14 @@ class PostResponse (PostBase):
 	author: UserPublic		# this will automatically be retrieved from the database and validated
 
 
+# post response that handles returning posts in batches - pagination
+class PaginatedPostsResponse (BaseModel):
+	posts: list[PostResponse]
+	total: int
+	skip: int
+	limit: int
+	has_more: bool
+
 
 
 

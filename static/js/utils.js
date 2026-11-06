@@ -24,5 +24,22 @@ export function hideModal (modalId) {
 	if (modal) modal.hide();
 }
 
+// XSS prevention for dynamic content insertion
+export function escapeHtml (text) {
+	const div = document.createElement("div");	// create an element to work in
+	div.textContent = text;		// set its text
+	return div.innerHTML;		// read back as HTML - this will escape-ify it to make it safe
+}
+
+// Date formatting to match server's strftime("%B %d, %Y")
+export function formatDate (dateString) {
+	const date = new Date(dateString);
+	return date.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
+		day: "2-digit",
+	});
+}
+
 
 

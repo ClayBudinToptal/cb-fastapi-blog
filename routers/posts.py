@@ -15,18 +15,61 @@ from schemas import PostCreate, PostResponse, PostUpdate
 
 from auth import CurrentUser
 
+# imports for pagination
+from fastapi import Query
+from sqlalchemy import func
+from schemas import PaginatedPostsResponse
+
+
+
+
 router = APIRouter()
 
 # get all posts
-@router.get("", response_model=list[PostResponse])
-async def get_posts (db: Annotated[AsyncSession, Depends(get_db)]):
+#@router.get("", response_model=list[PostResponse])
+#async def get_posts (db: Annotated[AsyncSession, Depends(get_db)]):
+#	result = await db.execute(
+#		select(database_models.Post)
+#		.options(selectinload(database_models.Post.author))
+#		.order_by(database_models.Post.id.desc())
+#	)
+#	posts = result.scalars().all()
+#	return posts
+
+# paginated version
+@router.get("", response_model=PaginatedPostsResponse)
+async def get_posts (
+	db: Annotated[AsyncSession, Depends(get_db)],
+	skip: Annotated[int, Query(ge=0)] = 0,
+	limit: Annotated[int, Query(ge=1, le=100)] = 10,
+):
+	# query the db to get the total number of posts
+	count_result = await db.execute(select(func.count()).select_from(database_models.Post))
+	total = count_result.scalar() or 0
+
+	# retrieve posts using skip and limit
 	result = await db.execute(
 		select(database_models.Post)
 		.options(selectinload(database_models.Post.author))
-		.order_by(database_models.Post.id.desc())
+		.order_by(database_models.Post.id.desc())		# important for consistent pagination
+		.offset(skip)
+		.limit(limit)
 	)
 	posts = result.scalars().all()
-	return posts
+
+	has_more = skip + len(posts) < total
+
+	return PaginatedPostsResponse(
+		# normally fastapi will validate the output automatically, but since we are building a list we need to manually do it
+		posts=[PostResponse.model_validate(post) for post in posts], 
+		total=total,
+		skip=skip,
+		limit=limit,
+		has_more=has_more,
+	)
+
+
+
 
 # get post by id
 @router.get("/{post_id}", response_model=PostResponse)
