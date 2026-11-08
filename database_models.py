@@ -45,6 +45,12 @@ class User (DBBase):
 	# all means delete all posts if user is delted, delete-orphan cleans up posts which don't have users assigned
 	posts: Mapped[list[Post]] = relationship(back_populates="author", cascade="all, delete-orphan")
 
+	# relationship to PasswordResetToken
+	reset_tokens: Mapped[list[PasswordResetToken]] = relationship(		# forward defn
+		back_populates="user",
+		cascade="all, delete-orphan",
+	)
+
 	# property method to generate the full path to the user's profile image - if no image is set, return a default image path
 	@property
 	def image_path (self) -> str:
@@ -74,4 +80,21 @@ class Post (DBBase):
 	author: Mapped[User] = relationship(back_populates="posts")
 
 
-	
+# adding new database scheme would mean migrating exsiting entries using alembic, but for testing we just delete and re-create the db
+class PasswordResetToken (DBBase):
+	__tablename__ = "password_reset_tokens"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+	user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)		# foreign ken into User
+	token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)	# hash - important for security
+	expires_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		nullable=False,
+	)
+	created_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		default=lambda: datetime.now(UTC),
+	)
+
+	user: Mapped[User] = relationship(back_populates="reset_tokens")
+

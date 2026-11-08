@@ -124,5 +124,17 @@ Email template - differ from web templates
 	Use simple table-based layouts bc email clients often don't support full CSS
 	Don't include JavaScript - email clients will strip it out (security risk)
 	Not JWTs - can't be invalidated before they expire (single-use), use simple random token
+		Need separate database model
+
+FastAPI has background tasks - emails take a long time to send, so offload to background tasks
+	If server crashes, etc. tasks are lost, but password reset is not critical
+	More reliable task queue - celery
+
+General strategy: implement all functionaliy in /api/* endpoints, then other functionality
+  like HTML, mobile, etc. just use those endpoints
+
+Currently using sqlite - simple database good for testing.
+	PostgresSQL - powerful db for Production use
+	migrate from sqlite with Alembic
 
 

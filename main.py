@@ -214,6 +214,28 @@ async def account_page (request: Request):
 		{"title": "Account"},
 	)
 
+## passwrod reset template routes - will just pass to /api/ routes
+@app.get("/forgot-password", include_in_schema=False)
+async def forgot_password_page (request: Request):
+	return templates.TemplateResponse(
+		request,
+		"forgot_password_template.html",
+		{"title": "Forgot Password"},
+	)
+
+
+@app.get("/reset-password", include_in_schema=False)
+async def reset_password_page (request: Request):
+	response = templates.TemplateResponse(
+		request,
+		"reset_password_template.html",
+		{"title": "Reset Password"},
+	)
+	response.headers["Referrer-Policy"] = "no-referrer"		# security - don't show what page we came from - includes token
+	return response
+
+
+
 
 # /api/* routes will return JSON
 #

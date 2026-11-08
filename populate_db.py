@@ -1,3 +1,7 @@
+#
+# updated with password reset stuff
+#
+
 import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -242,7 +246,9 @@ async def clear_existing_data() -> None:
 		print(f"Deleted profile pictures from {PROFILE_PICS_DIR}")
 
 	# Clear database tables (order respects foreign keys)
+	# this fails if db doesn't exist or is empty - run 'uv run fastapi dev main.py' first to create db
 	async with AsyncSessionLocal() as db:
+		await db.execute(delete(models.PasswordResetToken))
 		await db.execute(delete(models.Post))
 		await db.execute(delete(models.User))
 		await db.commit()
@@ -381,5 +387,6 @@ async def populate() -> None:
 
 if __name__ == "__main__":
 	asyncio.run(populate())
+
 
 
