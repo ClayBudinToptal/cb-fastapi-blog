@@ -76,6 +76,9 @@ class Post (DBBase):
 		default=lambda: datetime.now(UTC),
 	)
 
+	## New: Likes Field
+	likes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")	# server default is default value in db - eg when column is added during migration
+
 	# many-to-one relationship: many posts can have the same author, but each post has only one author
 	author: Mapped[User] = relationship(back_populates="posts")
 

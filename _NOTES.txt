@@ -133,8 +133,94 @@ FastAPI has background tasks - emails take a long time to send, so offload to ba
 General strategy: implement all functionaliy in /api/* endpoints, then other functionality
   like HTML, mobile, etc. just use those endpoints
 
-Currently using sqlite - simple database good for testing.
-	PostgresSQL - powerful db for Production use
+Currently using sqlite - simple database good for testing - db is a file, can't handle concurrent writes well
+	PostgreSQL - powerful db for Production use - industry standard w/ FastAPI
 	migrate from sqlite with Alembic
+
+PostgreSQL install:
+	https://www.postgresql.org/download/windows/ - latest version is 18
+	I already have v17 installed, so I will use that (postgres user pw ts)
+	Need to have the PostgreSQL service running on Windows - once installed runs at boot
+
+Create user and database w/ user as owner
+> psql -U postgres -c "CREATE USER bloguser WITH PASSWORD 'blogpass';"
+> createdb -U postgres -O bloguser blog
+> psql blog -U bloguser
+pw:
+blog=> \dt		- show tables
+[No Tables]
+blog=> \q 		- exit
+
+psycopg - Python utils for PostgreSQL - sync and async - [binary] gives pre-compiled binaries
+> uv add "psycopg[binary]"
+
+alembic - db migrations tracker - works well with sqlalchemy (same author)
+	saves migrations (db changes) in files - can upgrade and downgrade (roll back)
+	like version control for dbs
+> uv add alembic
+Initialize to run aync and save in alembic/ folder - alembic.ini settings file
+> uv run alembic init -t async alembic/
+Edit alembic.ini and alembic/env.py - see *change* comments
+
+Create the initial migration - creates migration file but doesn't apply to db
+> uv run alembic revision --autogenerate -m "Initial schema"
+This generated an InterfaceError - (psycopg.InterfaceError) Psycopg cannot use the 'ProactorEventLoop' to run in async mode.
+Fixed by changing event loop policy (bc we are on Windows) adding:
+import sys
+if sys.platform == "win32":
+	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+to env.py - will probably need to add to main.py as well
+
+In PostgreSQL all tables are in a public schema
+This will clear the database by dropping (deleting) the public schema and re-creating it:
+> psql -U bloguser -d blog -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+Now can delete migration file and do alembic initial schema again (it worked the first time, but to illustrate)
+Migration file is .py file that contains all the db commands to create (or delete) the db to update it
+
+Apply all the migrations up to the latest version (head) run the migration scripts in order:
+> uv run alembic upgrade head
+
+Verify:
+> psql blog -U bloguser
+blog=> \dt
+[Shows tables]
+blog=> \d posts
+[Shows columns for table posts]
+blog=> \q
+
+Check current migration state
+> uv run alembic current
+Shows we are at head revision
+
+Change db schema - add likes:int field to posts table in database_models.py
+> uv run alembic revision --autogenerate -m "Add likes field to posts table"
+Found new field, migration has code to add that column with its default
+Apply migration:
+> uv run alembic upgrade head
+
+Rollback:
+> uv run downgrade -1
+
+History:
+> uv run alembic history
+
+Uvicorn is a lightning-fast ASGI (Asynchronous Server Gateway Interface) web server implementation for Python.
+It bridges async Python web frameworks (such as FastAPI, Starlette, and Quart) with the outside network, handling HTTP/1.1, HTTP/2, and WebSockets.
+
+Run populate_db.py - had to add fix for Windows above
+> psql blog -U bloguser
+blog=> select id, title, likes from posts;
+[Shows fields from posts]
+
+By default alembic doesn't compare changes in type in fields (eg string of length 100 -> 50)
+	can set compare_types = True in env.py to activate that - is now True by default
+
+Typically run migrations in development environment, check migrations in and apply in production
+
+
+
+
+
+
 
 

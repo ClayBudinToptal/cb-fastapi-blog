@@ -14,6 +14,11 @@ from database import AsyncSessionLocal, engine
 from image_utils import PROFILE_PICS_DIR
 from main import app
 
+import sys
+if sys.platform == "win32":
+	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
 POPULATE_IMAGES_DIR = Path("populate_images")
 
 USERS = [

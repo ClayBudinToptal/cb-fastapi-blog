@@ -41,6 +41,8 @@ class Settings (BaseSettings):
 
 	frontend_url: str = "http://localhost:8000"
 
+	database_url: str			# contains user and pw, stored in .env
+
 
 settings = Settings()	# create a global settings object that can be imported and used throughout the application
 

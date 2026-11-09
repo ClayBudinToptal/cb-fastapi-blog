@@ -452,7 +452,8 @@ async def reset_password(
 		)
 
 	# check token expired
-	if reset_token.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):		# SQLite strips timezone info - add it back
+	#if reset_token.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):		# SQLite strips timezone info - add it back
+	if reset_token.expires_at < datetime.now(UTC):		# don't need timezone correct with PostgreSql
 		await db.delete(reset_token)	# delete token
 		await db.commit()
 		raise HTTPException(

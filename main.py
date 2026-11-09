@@ -32,8 +32,14 @@ from config import settings
 @asynccontextmanager
 async def lifespan (_app: FastAPI):
 	# startup
-	async with engine.begin() as conn:
-		await conn.run_sync(DBBase.metadata.create_all)	# run synchronous call async
+	# create db tables if not exist - good for sqlite but not PostgreSQL
+	# this is NOT a migration system - if new field/column added to table, but table already exists, this does nothing
+	# 	only way to add new field would be to delete database file and start over
+	# migrations track schema changes over time - like version control - used in production dbs
+	#async with engine.begin() as conn:
+	#	# run synchronous call async
+	#	await conn.run_sync(DBBase.metadata.create_all)
+
 	yield
 
 	# shutdown
