@@ -37,6 +37,8 @@ from auth import hash_reset_token, generate_reset_token
 from email_utils import send_password_reset_email
 from schemas import ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest
 
+from botocore.exceptions import ClientError
+from image_utils import upload_profile_image
 
 
 # create Router for User
@@ -295,7 +297,8 @@ async def delete_user (user_id: int, current_user: CurrentUser, db: Annotated[As
 	await db.commit()
 
 	if old_filename:
-		delete_profile_image(old_filename)
+		#delete_profile_image(old_filename)
+		await delete_profile_image(old_filename)
 
 
 ## Upload Profile Picture Endpoint
@@ -324,11 +327,22 @@ async def upload_profile_picture(
 	# normally we could just use a sync router and fastapi would run it in a threadpool automatically,
 	#  but we want to keep the router async for consistency and to allow for other async operations like database access
 	try:
-		new_filename = await run_in_threadpool(process_profile_image, content)		# run the CPU-bound image processing in a threadpool to avoid blocking the event loop
+		#new_filename = await run_in_threadpool(process_profile_image, content)		# run the CPU-bound image processing in a threadpool to avoid blocking the event loop
+		processed_bytes, new_filename = await run_in_threadpool(process_profile_image, content)		# run the CPU-bound image processing in a threadpool to avoid blocking the event loop
 	except UnidentifiedImageError as err:		# Pillow will validate image format and raise this error if the image is invalid or corrupted
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
 			detail="Invalid image file. Please upload a valid image (JPEG, PNG, GIF, WebP).",
+		) from err
+
+	## S3 upload try/except for routers/users.py (upload_profile_picture)
+	# Upload to S3 (also runs in threadpool via async wrapper)
+	try:
+		await upload_profile_image(processed_bytes, new_filename)
+	except ClientError as err:
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Failed to upload image. Please try again.",
 		) from err
 
 	# save the old filename to delete it after the new one is saved
@@ -341,7 +355,8 @@ async def upload_profile_picture(
 
 	# after new image is saved and database is updated, delete the old image file if it exists - do this after commit to avoid losing the new image if deletion fails
 	if old_filename:
-		delete_profile_image(old_filename)
+		#delete_profile_image(old_filename)
+		await delete_profile_image(old_filename)
 
 	return current_user		# return the updated user object with the new image filename
 
@@ -370,7 +385,8 @@ async def delete_user_picture(
 	await db.commit()
 	await db.refresh(current_user)
 
-	delete_profile_image(old_filename)
+	#delete_profile_image(old_filename)
+	await delete_profile_image(old_filename)
 
 	return current_user
 

@@ -55,7 +55,7 @@ templates = Jinja2Templates(directory="templates")	# tell Jinja2 where to find o
 
 # mount the static and media files directories
 app.mount("/static", StaticFiles(directory="static"), name="static")	# tell FastAPI where to find our static files
-app.mount("/media", StaticFiles(directory="media"), name="media")
+#app.mount("/media", StaticFiles(directory="media"), name="media")
 
 # include the routers
 # API doc will now be organized under tags and collapseable

@@ -217,6 +217,66 @@ By default alembic doesn't compare changes in type in fields (eg string of lengt
 
 Typically run migrations in development environment, check migrations in and apply in production
 
+For Windows, PostgreSQL stores the database data in (for v17):
+C:\Program Files\PostgreSQL\17\data\base\
+
+Log in as superuser (postgres) to grant settings:
+> psql -U postgres
+pw: ts
+postgres=# GRANT pg_read_all_settings TO bloguser;
+GRANT ROLE
+postgres=# \q
+> psql blog -U bloguser
+blog=> SHOW data_directory;
+		   data_directory
+-------------------------------------
+ C:/Program Files/PostgreSQL/17/data
+blog=> SELECT oid, datname FROM pg_database WHERE datname = 'blog';
+  oid  | datname
+-------+---------
+ 16412 | blog
+blog=> SELECT pg_relation_filepath('posts');
+ pg_relation_filepath
+----------------------
+ base/16412/16454
+(1 row)
+
+Built-in system tables: pg_class, pg_am, pg_authid, ...
+Helper files: _fsm free space map, _vm visibility map 
+See all classes (tables and other db objects):
+blog=> SELECT relfilenode, relname, relkind FROM pg_class WHERE relfilenode > 0;
+r means ordinary table, i means index, and t means TOAST table
+
+Back up database:
+> pg_dump -U postgres -F c -b -v -f "C:\backups\my_database.backup" your_database_name
+> pg_restore ...
+Also Continuous Live Directory Backups (pg_basebackup)
+
+
+Store uploaded files in Object Storage in the cloud (eg AWS S3)
+AWS interface:
+> uv add boto3
+
+
+Testing using pytest - install as development dependency - used in development but not production
+> uv add --dev pytest
+
+Mock AWS services - only need S3
+> uv add --dev "moto[s3]"
+
+httpx - already installed with fastapi[standard] - asynchronous
+anyio - same
+
+fastAPI has test client - fastapi.testclient - see test_demo.py - synchronous
+> uv run pytest tests/test_demo.py -v
+
+Don't want tests touching production database - would mess it up
+  Create new separate test_database
+> createdb -U postgres -O bloguser test_blog	(postgres pw: ts)
+  Transactional Rollback Pattern - create db tables once, after each test undo changes, drop tables at end
+
+FastAPI is an ASGI application - Asynchronous Server Gateway Interface
+  uvicorn - async server - runs with uv run fastapi dev ...
 
 
 
