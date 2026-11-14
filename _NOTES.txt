@@ -278,6 +278,26 @@ Don't want tests touching production database - would mess it up
 FastAPI is an ASGI application - Asynchronous Server Gateway Interface
   uvicorn - async server - runs with uv run fastapi dev ...
 
+conftest.py - overrides env vars and app objects with testing versions: fixtures, mocks, etc.
+pytest fixtures - objects created in conftest.py to do specific testing tasks
+	eg creating a user, mocking AWS S3, Async client etc.
+	imported automatically into tests
+
+Run one test file
+> uv run pytest tests/test_posts.py -v
+
+Run one test function
+> uv run pytest tests/test_posts.py::test_update_post_wrong_user -v
+
+Run all tests in directory
+> uv run pytest tests/ -v
+
+-v verbose, -s show any print() output in test
+
+AI (Claude) can generate test code - catch things missed, handle rote repetition aspect of testing
+
+playwright, selenium - emulate browser clicks, etc. to test HTML side
+
 
 
 
