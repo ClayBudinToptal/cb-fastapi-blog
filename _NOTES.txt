@@ -299,6 +299,21 @@ AI (Claude) can generate test code - catch things missed, handle rote repetition
 playwright, selenium - emulate browser clicks, etc. to test HTML side
 
 
+Deploy to Virtual Private Server (VPS)
+Akamai Linode, Digital Ocean, AWS EC2, ...
+Domain names: name.com, namecheap.com, public domain
+Free SSL cerificate -> https
+Security hardening on server - baseline
+Vercel and others - free sub-domain and hosting
+
+Add to app: health check endpoint -> database is OK
+Used by load balancers and other software
+
+Upload files to public server - scp, GitHub, FTP
+	GitHub - create repo and add remote then git push it up to cloud
+
+Tutorial uses linode.com for VPS and GitHub repo as source
+vps_setup.txt file
 
 
 
