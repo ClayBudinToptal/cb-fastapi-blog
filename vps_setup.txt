@@ -17,6 +17,7 @@ PART 1: BASE VPS SECURITY SETUP
 	-> Choose a Linode Plan (Shared CPU with 1GB RAM for $5/mo works for small sites)
 	-> Give it a label (e.g., fastapi-blog)
 	-> Use a Strong Root Password
+	NEW-> Choose not firewall
 	-> Create Linode
 
 This will give you a public IP address to login to the server.
@@ -26,7 +27,7 @@ This will give you a public IP address to login to the server.
 ## Initial Login and System Update
 
 	-> Copy your Public IP from the dashboard
-	-> Login as root (first and last time!)
+	-> Login as root (first and last time!) root is too powerful for general use
 		ssh root@YOUR_IP_ADDRESS
 
 	-> Update the system
@@ -56,11 +57,12 @@ This will give you a public IP address to login to the server.
 
 	-> On your LOCAL machine (not the server!), generate an Ed25519 key:
 		ssh-keygen -t ed25519 -C "YourName - DeviceName - Date"
+		# -C is comment, can be anything
 
 		# The -C comment gets embedded in the public key. When you view
 		# authorized_keys on the server, you'll see who/what is allowed to connect.
 		# Example:
-		ssh-keygen -t ed25519 -C "CoreyMS - MacBook Pro - 2025-01"
+		#ssh-keygen -t ed25519 -C "CoreyMS - MacBook Pro - 2025-01"
 
 	-> When prompted for file location, use a descriptive name:
 		/Users/yourname/.ssh/id_ed25519_fastapiblog_macbookpro
@@ -70,15 +72,16 @@ This will give you a public IP address to login to the server.
 
 	-> Enter a strong passphrase (protects the key if your machine is compromised)
 
-	-> Copy the public key to your server (still on local machine):
-		ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro coreyms@YOUR_IP_ADDRESS
-		# Enter the password for coreyms when prompted
+	-> Copy the **public key** to your server (still on local machine):
+		#ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro USERNAME@YOUR_IP_ADDRESS
+		ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro.pub USERNAME@YOUR_IP_ADDRESS
+		# Enter the password for USERNAME when prompted
 
 	-> Add the key to your SSH agent (so you don't have to specify -i every time):
 		ssh-add ~/.ssh/id_ed25519_fastapiblog_macbookpro
 
 	-> Test login with the new user (IMPORTANT: Do this before disabling password auth!)
-		ssh coreyms@YOUR_IP_ADDRESS
+		ssh USERNAME@YOUR_IP_ADDRESS
 		# Should log in without asking for password (may ask for key passphrase)
 
 	-> Verify SSH directory permissions on the server (ssh-copy-id usually sets these,
@@ -120,6 +123,14 @@ This will give you a public IP address to login to the server.
 	-> IMPORTANT: Before closing your current session, open a NEW terminal and test:
 		ssh coreyms@YOUR_IP_ADDRESS
 		# If this works, you're safe. If not, use your current session to fix it!
+
+This didn't work for me:
+> ssh cbudin@162.216.18.152
+cbudin@162.216.18.152: Permission denied (publickey).
+
+So I set changes back the way they were and it worked (password entry)
+marked with # change
+I may have copied the ssh key over or installed it locally incorrectly (???)
 
 --------------------------------------------------------------------------------
 

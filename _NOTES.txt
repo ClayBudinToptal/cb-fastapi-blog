@@ -2,7 +2,8 @@
 Tutorials:
 https://www.youtube.com/watch?v=7AMjmCTumuo&list=PL-osiE80TeTsak-c-QsVeg0YYG_0TeyXI
 
-> uv init fastapi-blog-tutorial
+> uv init fastapi-blog-tutorial		- NO!
+
 Note: uv init now creates a package/module structure by default with src/<pkg>/__init__.py
 To create the original application structure with main.py, use:
 > uv init --no-package fastapi-blog-tutorial
@@ -313,8 +314,11 @@ Upload files to public server - scp, GitHub, FTP
 	GitHub - create repo and add remote then git push it up to cloud
 
 Tutorial uses linode.com for VPS and GitHub repo as source
-Got account in linode.com - entered creti card info
-vps_setup.txt file
+Got account in linode.com - entered credit card info
+	Nanode 1 GB on Shared CPU -> $5 / month, $0.0075 / hr - see .env
+Created repo on GitHub.com and connected remote to local repo and pushed up
+Did not register new domain
+vps_setup.txt file - recommended configs for VPS
 
 
 
