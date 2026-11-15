@@ -307,12 +307,13 @@ Security hardening on server - baseline
 Vercel and others - free sub-domain and hosting
 
 Add to app: health check endpoint -> database is OK
-Used by load balancers and other software
+Used by monitors, load balancers and other software
 
 Upload files to public server - scp, GitHub, FTP
 	GitHub - create repo and add remote then git push it up to cloud
 
 Tutorial uses linode.com for VPS and GitHub repo as source
+Got account in linode.com - entered creti card info
 vps_setup.txt file
 
 
