@@ -320,6 +320,28 @@ Created repo on GitHub.com and connected remote to local repo and pushed up
 Did not register new domain
 vps_setup.txt file - recommended configs for VPS
 
+Web server to run on VPS: NGINX
+Reverse proxy - sits in front of application - handles SSL and https, serves files - load balancing and caching
+
+It is called a reverse proxy because it sits in front of your backend servers to protect and manage them — doing
+the exact opposite of a traditional (forward) proxy, which sits in front of clients to protect and manage users.
+
+Register claysfunhouse.xyz domain on namecheap.com for $2 for 1 year (renews at $21, so let it lapse - turn off autorenew)
+Manage -> Advanced DNS -> Remove existing Host records
+Add 2 A Records: Host @ (non-www) and www both with linode IP address
+DNS propagation can take up to 48 hrs (more typically 5-30 minutes)
+
+> dig claysfunhouse.xyz +short
+> dig www.claysfunhouse.xyz +short
+162.216.18.152
+
+https -> SSL certificate
+Let's Encrypt - https://letsencrypt.org/
+Certbot via Snap
+> sudo certbot --nginx -d claysfunhouse.xyz -d www.claysfunhouse.xyz
+Should not be able to access web site with https://
+
+Web content being served by NGINX is in: /var/www/html
 
 
 

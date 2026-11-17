@@ -17,7 +17,7 @@ PART 1: BASE VPS SECURITY SETUP
 	-> Choose a Linode Plan (Shared CPU with 1GB RAM for $5/mo works for small sites)
 	-> Give it a label (e.g., fastapi-blog)
 	-> Use a Strong Root Password
-	NEW-> Choose not firewall
+*** NEW-> Choose no firewall
 	-> Create Linode
 
 This will give you a public IP address to login to the server.
@@ -57,7 +57,7 @@ This will give you a public IP address to login to the server.
 
 	-> On your LOCAL machine (not the server!), generate an Ed25519 key:
 		ssh-keygen -t ed25519 -C "YourName - DeviceName - Date"
-		# -C is comment, can be anything
+		# -C is add comment, can be anything
 
 		# The -C comment gets embedded in the public key. When you view
 		# authorized_keys on the server, you'll see who/what is allowed to connect.
@@ -73,12 +73,19 @@ This will give you a public IP address to login to the server.
 	-> Enter a strong passphrase (protects the key if your machine is compromised)
 
 	-> Copy the **public key** to your server (still on local machine):
-		#ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro USERNAME@YOUR_IP_ADDRESS
-		ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro.pub USERNAME@YOUR_IP_ADDRESS
+		ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro USERNAME@YOUR_IP_ADDRESS
+		#ssh-copy-id -i ~/.ssh/id_ed25519_fastapiblog_macbookpro.pub USERNAME@YOUR_IP_ADDRESS
 		# Enter the password for USERNAME when prompted
+
+****************
+Start ssh agent (once for each terminal):
+> eval "$(ssh-agent -s)"
 
 	-> Add the key to your SSH agent (so you don't have to specify -i every time):
 		ssh-add ~/.ssh/id_ed25519_fastapiblog_macbookpro
+
+** Need to do this once for each terminal as well
+ssh-add ~/.ssh/id_ed25519_fastapi_blanche_20261115
 
 	-> Test login with the new user (IMPORTANT: Do this before disabling password auth!)
 		ssh USERNAME@YOUR_IP_ADDRESS
@@ -97,6 +104,7 @@ This will give you a public IP address to login to the server.
 
 	-> Now logged in as your non-root user, edit the SSH config:
 		sudo nano /etc/ssh/sshd_config
+		(or vi)
 
 	-> Find and change these settings (uncomment if needed):
 
@@ -104,16 +112,16 @@ This will give you a public IP address to login to the server.
 		PermitRootLogin no
 
 		# Ensure public key authentication is enabled
-		PubkeyAuthentication yes
+		PubkeyAuthentication yes		***** already set to yes
 
 		# Disable password authentication (keys only!)
 		PasswordAuthentication no
 
 		# Disable empty passwords
-		PermitEmptyPasswords no
+		PermitEmptyPasswords no		***** already set to no
 
 		# Disable challenge-response (another password method)
-		KbdInteractiveAuthentication no
+		KbdInteractiveAuthentication no		***** already set to no
 
 	-> Save and exit (Ctrl+X, Y, Enter)
 
@@ -124,13 +132,36 @@ This will give you a public IP address to login to the server.
 		ssh coreyms@YOUR_IP_ADDRESS
 		# If this works, you're safe. If not, use your current session to fix it!
 
+************************
 This didn't work for me:
 > ssh cbudin@162.216.18.152
 cbudin@162.216.18.152: Permission denied (publickey).
 
 So I set changes back the way they were and it worked (password entry)
-marked with # change
+ marked with # CB change
 I may have copied the ssh key over or installed it locally incorrectly (???)
+
+Fixed: the issue was I needed to start the ssh agent locally before I can do ssh-add
+ in the previous section where I set up the ssh keys:
+> eval "$(ssh-agent -s)"
+> ssh-add ~/.ssh/id_ed25519_fastapi_blanche_20261115
+
+This needs to be done once per terminal login (sets env var $SSH_AUTH_SOCK)
+Can add to .bashrc to start automatically:
+
+if [ -z "$SSH_AUTH_SOCK" ]; then
+   eval "$(ssh-agent -s)" > /dev/null
+   ssh-add ~/.ssh/id_ed25519_fastapi_blanche_20261115 2>/dev/null
+fi
+
+Now the only way to log in is via the ssh keys:
+> ssh dan@162.216.18.152
+dan@162.216.18.152: Permission denied (publickey).
+[Does not give option to login with password]
+> ssh cbudin@162.216.18.152
+[Success via ssh keys]
+
+
 
 --------------------------------------------------------------------------------
 
@@ -238,6 +269,13 @@ I may have copied the ssh key over or installed it locally incorrectly (???)
 	-> Check banned IPs (after some time)
 		sudo fail2ban-client status sshd
 
+*****************
+Saw 2-4 failed logins and 1 banned almost immediately
+24 hours later, 1639 failed logins and 200 banned
+Bots crawling the internet looking for unsecured servers
+
+
+
 --------------------------------------------------------------------------------
 
 ## Enable Automatic Security Updates
@@ -272,6 +310,10 @@ I may have copied the ssh key over or installed it locally incorrectly (???)
 
 	-> Check when updates last ran
 		cat /var/log/unattended-upgrades/unattended-upgrades.log
+***** I need to sudo this to make it work
+
+
+
 
 ================================================================================
 PART 2: WEB SERVER SETUP (NGINX)
@@ -291,6 +333,7 @@ PART 2: WEB SERVER SETUP (NGINX)
 	-> Test by visiting your IP in a browser
 		http://YOUR_IP_ADDRESS
 		# Should see the NGINX welcome page
+**** I get a warning first that page is not secure and have to click on "go to unsecured page"
 
 	-> Note on /var/www/html ownership:
 		# By default, /var/www/html is owned by root. NGINX (running as www-data)
@@ -411,6 +454,8 @@ PART 2: WEB SERVER SETUP (NGINX)
 	-> Test automatic renewal
 		sudo certbot renew --dry-run
 
+*** SSL certificates expire after 90 days, so certbot sets a timer to renew it
+
 	-> Verify renewal timer is active
 		systemctl list-timers | grep certbot
 		# Should show snap.certbot.renew.timer
@@ -460,7 +505,7 @@ PART 3: FASTAPI APPLICATION SETUP
 		sudo -u postgres psql
 
 		# In the PostgreSQL prompt:
-		CREATE USER bloguser WITH PASSWORD 'your_secure_password';
+		CREATE USER bloguser WITH PASSWORD 'blogpass';			# want to use a strong password
 		CREATE DATABASE blog OWNER bloguser;
 		GRANT ALL PRIVILEGES ON DATABASE blog TO bloguser;
 		\q
@@ -471,7 +516,7 @@ PART 3: FASTAPI APPLICATION SETUP
 		# Type \q to exit
 
 	-> Note your connection string for later:
-		postgresql+psycopg://bloguser:your_secure_password@localhost/blog
+		postgresql+psycopg://bloguser:blogpass@localhost/blog
 
 --------------------------------------------------------------------------------
 
@@ -485,16 +530,22 @@ PART 3: FASTAPI APPLICATION SETUP
 		cd /var/www/fastapi-blog
 		git clone https://github.com/yourusername/your-repo.git .
 
+*****
+git clone https://github.com/ClayBudinToptal/cb-fastapi-blog.git .
+
 		# Or if using a private repo, set up deploy keys first
 
 		# Alternative: Copy files from your local machine using scp
 		# Run this on your LOCAL machine (not the server):
 		# scp -r /path/to/your/project/* coreyms@YOUR_IP_ADDRESS:/var/www/fastapi-blog/
+		# won't copy files of the form .file (.env)
 
 	-> Set secure file permissions (deny by default, then open what's needed)
 
 		# Lock down everything first: owner read/write only for files,
 		# owner read/write/execute only for directories
+*** "Denied by Default"
+
 		find . -type f -exec chmod 600 {} \;
 		find . -type d -exec chmod 700 {} \;
 
@@ -535,14 +586,19 @@ PART 3: FASTAPI APPLICATION SETUP
 	-> Run database migrations
 		cd /var/www/fastapi-blog
 		uv run alembic upgrade head
+** This will create the initial tables in the database
 
 	-> Test the application manually
 
 		# Temporarily open port 8000 in the firewall for testing
 		sudo ufw allow 8000/tcp
 
+# host 0.0.0.0 makes it accessible from outside
 		uv run fastapi run --host 0.0.0.0 --port 8000
-		# Visit http://YOUR_IP:8000 to test
+
+		# Visit http://YOUR_IP:8000 to test   - IP of server
+# browser: http://162.216.18.152:8000/
+# also: http://162.216.18.152:8000/health
 		# Ctrl+C to stop
 
 		# Close the temporary port (nginx will handle traffic from here on)
@@ -551,6 +607,14 @@ PART 3: FASTAPI APPLICATION SETUP
 --------------------------------------------------------------------------------
 
 ## Set Up FastAPI with systemd
+
+# system service manager on Linux - start, stop, restart
+#  will restart if stops/crashes
+
+# number of CPU cores
+> nproc
+1
+Want 1 Async worker per core
 
 	# Note: The traditional "Gunicorn + Uvicorn workers" pattern still works,
 	# but uvicorn.workers.UvicornWorker is deprecated. Plain Uvicorn (or the
@@ -686,6 +750,14 @@ PART 3: FASTAPI APPLICATION SETUP
 		sudo systemctl reload nginx
 
 	-> Your FastAPI app should now be live at https://yourdomain.com!
+https://claysfunhouse.xyz
+https://claysfunhouse.xyz/health
+https://claysfunhouse.xyz/docs
+
+Sending Email for Forgot Password isn't working - check logs
+
+This entire file could be place in Ansible script to automatically set up a server
+https://docs.ansible.com/
 
 --------------------------------------------------------------------------------
 
@@ -704,7 +776,7 @@ PART 3: FASTAPI APPLICATION SETUP
 	sudo tail -f /var/log/nginx/access.log
 	sudo tail -f /var/log/nginx/error.log
 
-	# Update application code
+	# Update application code from GitHub repo
 	cd /var/www/fastapi-blog
 	git pull
 	uv sync
