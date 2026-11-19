@@ -20,6 +20,7 @@ from config import settings
 #)
 
 # connect to PostgreSQL db with user and pw
+#print(f"{settings.database_url=}")
 engine = create_async_engine(settings.database_url)
 
 

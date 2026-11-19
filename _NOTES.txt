@@ -229,7 +229,7 @@ GRANT ROLE
 postgres=# \q
 > psql blog -U bloguser
 blog=> SHOW data_directory;
-		   data_directory
+		data_directory
 -------------------------------------
  C:/Program Files/PostgreSQL/17/data
 blog=> SELECT oid, datname FROM pg_database WHERE datname = 'blog';
@@ -253,12 +253,11 @@ Back up database:
 > pg_restore ...
 Also Continuous Live Directory Backups (pg_basebackup)
 
-
 Store uploaded files in Object Storage in the cloud (eg AWS S3)
 AWS interface:
 > uv add boto3
 
-
+17
 Testing using pytest - install as development dependency - used in development but not production
 > uv add --dev pytest
 
@@ -300,6 +299,7 @@ AI (Claude) can generate test code - catch things missed, handle rote repetition
 playwright, selenium - emulate browser clicks, etc. to test HTML side
 
 
+18
 Deploy to Virtual Private Server (VPS)
 Akamai Linode, Digital Ocean, AWS EC2, ...
 Domain names: name.com, namecheap.com, public domain
@@ -342,6 +342,144 @@ Certbot via Snap
 Should not be able to access web site with https://
 
 Web content being served by NGINX is in: /var/www/html
+
+19
+Deploy using Docker and Google Cloud Run
+  GCR scales usage down to 0 (no servers when no one is using the app)
+  Cloud-hosted PostgreSQL database - Neon
+
+Install Docker Desktop
+https://docs.docker.com/desktop/setup/install/windows-install/
+Per-User installation with Windows Subsystem for Linux 2 (WSL 2)
+Install WSL 2, in Admin PowerShell:
+ps> wsl --install
+user: clay pw: ts
+C: is /mnt/c/ - Windows homedir is /mnt/c/Users/clay_
+~ is /home/clay
+Launch Docker Desktop - skip login - then quit - Docker is still running - see Taskbar icons
+> docker --version
+
+Dockerfile - recipe that tells Docker how to build container Image
+	Builder stage and production stage
+	allows for copying only necessary files between stages to keep Image as small as possible
+Image - the build result of the recipe
+Container - running instance of an Image
+
+.dockerignore file - files to ignore when copying into Image
+
+Docker containers are stateless - don't retain any data besides Image
+Can't run PostgreSQL inside container - would get wiped out every time
+Use online PostgreSQL db - Neon - neon.com - popular, has free tier
+Get database URLs for direct and pooled connection - save in .env
+
+Alembic database migration
+Need to comment out DATABASE_URL_POOLED line in .env - not imported in settings
+This will create the tables in the Neon database
+> uv run alembic upgrade head
+Can see in Neon dashboard -> Postgre database -> Tables
+
+Run dev server - test Neon database separate from Docker - isolate any issues before building Image
+> uv run fastapi dev main.py
+Check health: http://127.0.0.1:8000/health
+If OK, can stop dev server - know connection to online db is OK
+
+Do a Docker build locally to test
+Put .python-version in .dockerignore to prevent confusion
+> docker build -t fastapi-app .
+
+Now run the Image
+Map port 8080 incoming to port 8080 in the Docker container - 8080 is a Docker default (and Google Cloud Run)
+Access in browser at: http://127.0.0.1:8080/
+Docker does not like quotes around the db URL in .env
+> docker run -p 8080:8080 --env-file .env fastapi-app
+
+If works here locally then should work on Google Cloud Run as well
+Stop local container w/ Ctrl-C
+Any time code is changed, Docker Image must be built again
+
+Google Cloud
+cloud.google.com
+Log in and create new project: FastAPI-Blog
+Select it through project picker (click on project in upper left corner)
+
+Install Google Cloud Command Line Interface (CLI) with PowerShell:
+https://docs.cloud.google.com/sdk/docs/install-sdk
+ps> (New-Object Net.WebClient).DownloadFile("https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe", "$env:Temp\GoogleCloudSDKInstaller.exe")
+ps> & $env:Temp\GoogleCloudSDKInstaller.exe
+
+Quit and restart VSCode to pick up new app on $PATH
+> gcloud --version
+Docs say to do init, but tutorial doesn't do this - does an authentication
+> gcloud init
+Authenticate with Google
+> gcloud auth login
+Set current project - get project ID from Google Cloud console
+> gcloud config set project fastapi-blog-515204
+Enable service - requires billing to be set up even if within free tier
+> gcloud services enable run.googleapis.com						-- running Containers
+> gcloud services enable cloudbuild.googleapis.com				-- building Images
+> gcloud services enable artifactregistry.googleapis.com		-- storing Images
+Check
+> gcloud services list --enabled
+
+Create Artifact Registry repo - only done once
+> gcloud artifacts repositories create fastapi-repo --repository-format=docker --location=us-east4
+
+Build Image and save in registry - tag follows a specific format
+> gcloud builds submit --tag us-east4-docker.pkg.dev/fastapi-blog-515204/fastapi-repo/fastapi-app
+
+Launch container
+--allow-unauthenticated means anyone can access (w/o Google authentication) - want this for public web site
+> gcloud run deploy fastapi-service \
+    --image us-east4-docker.pkg.dev/fastapi-blog-515204/fastapi-repo/fastapi-app \
+    --region us-east4 \
+    --allow-unauthenticated
+This will fail because the environment (.env) has not been set up
+But Cloud Run service has been created - just needs to have env info added
+Could use gcloud CLI to send .env
+Use Cloud Console UI
+
+Need new secret key
+> python -c "import secrets ; print(secrets.token_hex(32))"
+Copy generated key
+Go to Google Cloud Console in browser -> Cloud Run -> click on service (fastapi-service)
+Copy Service URL and save in .env
+Click on Containers tab - Variables & Secrets -> Environment Variables -> Add Variable
+FRONTEND_URL=<Service_URL>
+SECRET_KEY=<Generated_Key>
+Everything in .env (except FRONTEND_URL and SECRET_KEY)
+Change MAIL_PORT to 587
+Click View Diff & Redeploy -> Deploy
+Now Service is Running - Revision History tab in Console
+Open Service_URL in browser - App is running w/database from local check
+Check /health and /docs routes
+Observability tab -> Logs - application logs
+
+Map our domain name to this site
+Google Cloud Built-In Domain Mapping - preview/beta - not recommended for production
+  External load balancer, firebase hosting, Cloudflare
+  OK for this tutorial
+Google Search Console - verify domain ownership
+https://search.google.com/search-console/welcome
+Website -> Domain -> claysfunhouse.xyz
+Google provides a text line to verify domain
+Go to domain at namecheap.com -> Advanced DNS and add to DNS records as TXT record Host: @ Value: Google text line
+Back to Google Search Console -> Verify -> Go to property
+
+Set domain mapping (beta)
+> gcloud beta run domain-mappings create \
+--service=fastapi-service \
+--domain=claysfunhouse.xyz \
+--region=us-east4
+Ask to install Beta Commands module [beta] - YES
+Success - prints out new DNS records to add in namecheap.com Host is @
+A records - IP4, AAAA records - IPv6
+Delete old A records that forwarded to VPS
+Also OK to delete Google TXT record - used for varification only
+Takes a while to propagate - Google has their own schedule
+
+Test
+> gcloud beta run domain-mappings describe --domain=claysfunhouse.xyz --region=us-east4
 
 
 

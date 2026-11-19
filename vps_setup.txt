@@ -756,7 +756,7 @@ https://claysfunhouse.xyz/docs
 
 Sending Email for Forgot Password isn't working - check logs
 
-This entire file could be place in Ansible script to automatically set up a server
+The steps in this entire file could be placed in an Ansible script to automatically set up a server
 https://docs.ansible.com/
 
 --------------------------------------------------------------------------------

@@ -65,7 +65,7 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 
 # Health Check Endpoint - check dtabase
 @app.get("/health")
-async def health_check(db: Annotated[AsyncSession, Depends(get_db)]):
+async def health_check (db: Annotated[AsyncSession, Depends(get_db)]):
 	try:
 		await db.execute(text("SELECT 1"))	# lightweight query - ping essentially
 	except Exception as exc:
@@ -74,6 +74,30 @@ async def health_check(db: Annotated[AsyncSession, Depends(get_db)]):
 			detail="Database unavailable",
 		) from exc
 	return {"status": "healthy"}
+
+
+## Security Headers Middleware
+# adds security headers to responses after passing them along to call_next
+# this was handled by NGINX previously in our VPS setup
+# middleware can modify requests (before) or responses (after)
+@app.middleware("http")
+async def add_security_headers (request: Request, call_next):
+	response = await call_next(request)		# request goes through nornally
+
+	# add security headers to response
+	response.headers["X-Frame-Options"] = "SAMEORIGIN"		# prevent embedding in iFrame and other security risks
+	response.headers["X-Content-Type-Options"] = "nosniff"	# trust content-type header
+
+	if "Referrer-Policy" not in response.headers:
+		response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"		# set if not already set (password reset)
+
+	if request.url.hostname not in ("localhost", "127.0.0.1"):
+		response.headers["Strict-Transport-Security"] = (		# force use of https except for local
+			"max-age=63072000; includeSubDomains"
+		)
+
+	return response
+
 
 
 # regular routes - return HTML
