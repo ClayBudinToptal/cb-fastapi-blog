@@ -1,6 +1,6 @@
 
 Tutorials:
-https://www.youtube.com/watch?v=7AMjmCTumuo&list=PL-osiE80TeTsak-c-QsVeg0YYG_0TeyXI
+https://www.youtube.com/playlist?list=PL-osiE80TeTsak-c-QsVeg0YYG_0TeyXI
 
 > uv init fastapi-blog-tutorial		- NO!
 
@@ -480,7 +480,34 @@ Takes a while to propagate - Google has their own schedule
 
 Test
 > gcloud beta run domain-mappings describe --domain=claysfunhouse.xyz --region=us-east4
+Browser: https://claysfunhouse.xyz/
 
+When make changes to code:
+Rebuild and re-save in registry (same command as before)
+> gcloud builds submit --tag us-east4-docker.pkg.dev/fastapi-blog-515204/fastapi-repo/fastapi-app
+Redeploy:
+> gcloud run deploy fastapi-service \
+    --image us-east4-docker.pkg.dev/fastapi-blog-515204/fastapi-repo/fastapi-app \
+    --region us-east4 \
+    --allow-unauthenticated
+Google Cloud Run handles redeploy - keeps old container going, launches new container, if new
+ container is healthy, it routes all new incoming traffic to the new container and closes the old,
+ otherwise the old keeps running.
 
+If database schema changes:
+Change to direct-connection URL in .env
+> uv run alembic upgrade head
+Switch URL back to pooled in .env
+
+Can deploy on GCP directly from source:
+> gcloud run deploy fastapi-service -source . --region us-east4
+
+Build packs - Google automatic builds - don't need Dockerfile, but provides generic features
+
+Google and Neon - both have free tiers and scale to 0, only pay if site gets a lot of traffic
+	Google Cloud Run - managed container platform
+Linode VPS deployment - pay fixed price per month
+
+FastAPI Cloud - deployment option - in private beta
 
 
